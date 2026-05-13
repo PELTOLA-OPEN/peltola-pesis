@@ -57,20 +57,25 @@
 
     .teams {
       display: grid;
-      overflow: hidden;
+      width: max-content;
+      overflow: visible;
       border-radius: 3px;
-      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+      filter: drop-shadow(0 18px 42px rgba(0, 0, 0, 0.34));
     }
 
     .team-row {
       display: grid;
       grid-template-columns: 10px var(--name-col) 64px 64px 46px 46px;
+      width: max-content;
       min-height: clamp(39px, 4.3vw, 58px);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.22);
-      background: linear-gradient(90deg, rgba(31, 210, 196, 0.90), rgba(19, 171, 170, 0.86));
     }
-    .team-row:last-child { border-bottom: 0; }
-    .team-row:not(.active) { filter: saturate(0.75) brightness(0.86); }
+
+    .team-row:not(.active) .team-strip,
+    .team-row:not(.active) .team-name,
+    .team-row:not(.active) .set-wins,
+    .team-row:not(.active) .runs {
+      filter: saturate(0.75) brightness(0.86);
+    }
 
     .team-strip.home { background: #d70d18; }
     .team-strip.away { background: #101cff; }
@@ -85,8 +90,9 @@
     }
 
     .team-name {
-      padding: 0 2ch 0 16px;
-      overflow: hidden;
+      padding: 0 1ch 0 16px;
+      overflow: visible;
+      background: linear-gradient(90deg, rgba(31, 210, 196, 0.90), rgba(19, 171, 170, 0.86));
       color: rgba(0, 0, 0, 0.78);
       font-size: clamp(20px, 2.5vw, 36px);
       font-weight: 950;
@@ -102,6 +108,7 @@
     .runs {
       justify-items: center;
       border-left: 1px solid rgba(0, 0, 0, 0.13);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.22);
       background: var(--cell);
       color: var(--cell-text);
       font-size: clamp(22px, 2.6vw, 36px);
@@ -118,6 +125,7 @@
     .out-cell {
       justify-items: center;
       border-left: 1px solid rgba(0, 0, 0, 0.13);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.22);
       background: rgba(16, 170, 166, 0.84);
       color: rgba(0, 0, 0, 0.78);
       font-size: clamp(20px, 2.3vw, 32px);
@@ -128,7 +136,8 @@
 
     .out-cell.empty { color: transparent; }
     .team-row:not(.active) .out-cell {
-      border-left-color: transparent;
+      visibility: hidden;
+      border: 0;
       background: transparent;
       color: transparent;
     }
@@ -179,7 +188,7 @@
       }
 
       .team-name {
-        padding: 0 2ch 0 10px;
+        padding: 0 1ch 0 10px;
         font-size: 20px;
       }
 
@@ -282,9 +291,28 @@
     }
 
     function setNameColumnSize(homeName, awayName) {
-      const longest = Math.max(String(homeName).length, String(awayName).length, 4);
-      const widthCh = Math.min(Math.max(longest + 2, 10), 32);
-      document.documentElement.style.setProperty("--name-col", `${widthCh}ch`);
+      const width = Math.max(
+        measureTeamName(homeName),
+        measureTeamName(awayName),
+        measureTeamName("HOME")
+      );
+      document.documentElement.style.setProperty("--name-col", `${Math.ceil(width)}px`);
+    }
+
+    function measureTeamName(name) {
+      const probe = document.createElement("div");
+      probe.className = "team-name";
+      probe.style.position = "absolute";
+      probe.style.left = "-9999px";
+      probe.style.top = "-9999px";
+      probe.style.width = "max-content";
+      probe.style.minWidth = "0";
+      probe.style.visibility = "hidden";
+      probe.textContent = String(name || "").toUpperCase();
+      document.body.appendChild(probe);
+      const width = probe.getBoundingClientRect().width;
+      probe.remove();
+      return width;
     }
 
     function formatHalf(value) {

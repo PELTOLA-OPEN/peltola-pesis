@@ -86,9 +86,18 @@
     .score-preview > div { padding: 12px 8px; border-bottom: 1px solid var(--border); }
     .score-preview > div:nth-last-child(-n+4) { border-bottom: 0; }
     .score-preview .head { color: var(--muted); font-size: 20px; font-weight: 950; letter-spacing: 0; text-transform: uppercase; white-space: nowrap; }
-    .score-preview .team { min-width: max-content; overflow: visible; padding-right: 12px; font-size: 20px; font-weight: 950; text-transform: uppercase; white-space: nowrap; }
+    .score-preview .team,
+    .score-preview .stat-head {
+      font-size: 16.8px !important;
+      font-weight: 950;
+      letter-spacing: 0;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .score-preview .team { min-width: max-content; overflow: visible; padding-right: 12px; }
     .score-preview .num { min-width: 0; text-align: center; font-size: 24px; font-weight: 950; }
-    .score-preview .stat-head { min-width: 0; text-align: center; font-size: 12px !important; font-weight: 950; line-height: 1; }
+    .score-preview .stat-head { min-width: 0; text-align: center; }
     .active-team { color: var(--accent); }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -139,9 +148,10 @@
       .score-preview { grid-template-columns: max-content minmax(48px, 1fr) minmax(54px, 1fr) minmax(48px, 1fr); width: 100%; }
       .score-preview > div { padding: 9px 5px; }
       .score-preview .head { font-size: 17px; letter-spacing: 0; }
-      .score-preview .team { padding-right: 8px; font-size: 17px; }
+      .score-preview .team { padding-right: 8px; }
+      .score-preview .team,
+      .score-preview .stat-head { font-size: 14px !important; }
       .score-preview .num { font-size: 21px; }
-      .score-preview .stat-head { font-size: 10px !important; }
     }
   </style>
 </head>

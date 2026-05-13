@@ -83,7 +83,7 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .score-preview > div { padding: 12px 8px; border-bottom: 1px solid var(--border); }
+    .score-preview > div { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--border); }
     .score-preview > div:nth-last-child(-n+4) { border-bottom: 0; }
     .score-preview .head { color: var(--muted); font-size: 20px; font-weight: 950; letter-spacing: 0; text-transform: uppercase; white-space: nowrap; }
     .score-preview .team,
@@ -95,9 +95,9 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .score-preview .team { min-width: max-content; overflow: visible; padding-right: 12px; }
-    .score-preview .num { min-width: 0; text-align: center; font-size: 24px; font-weight: 950; }
-    .score-preview .stat-head { min-width: 0; text-align: center; }
+    .score-preview .team { min-width: max-content; overflow: visible; padding-right: 12px; justify-content: flex-start; }
+    .score-preview .num { min-width: 0; justify-content: center; text-align: center; font-size: 24px; font-weight: 950; }
+    .score-preview .stat-head { min-width: 0; justify-content: center; text-align: center; }
     .active-team { color: var(--accent); }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

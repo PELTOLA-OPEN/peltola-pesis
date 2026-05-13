@@ -15,6 +15,9 @@
       --line: rgba(255, 255, 255, 0.24);
       --cell: rgba(255, 255, 255, 0.88);
       --cell-text: #11161a;
+      --runs-bg: #005e5f;
+      --runs-text: #ffffff;
+      --name-col: 14ch;
     }
 
     * { box-sizing: border-box; }
@@ -48,7 +51,8 @@
       left: 3.5vw;
       display: grid;
       gap: 6px;
-      width: min(470px, 44vw);
+      width: max-content;
+      max-width: calc(100vw - 7vw);
     }
 
     .teams {
@@ -60,12 +64,13 @@
 
     .team-row {
       display: grid;
-      grid-template-columns: 10px minmax(128px, 1fr) 64px 64px 46px 46px;
+      grid-template-columns: 10px minmax(var(--name-col), max-content) 64px 64px;
       min-height: clamp(39px, 4.3vw, 58px);
       border-bottom: 1px solid rgba(0, 0, 0, 0.22);
       background: linear-gradient(90deg, rgba(31, 210, 196, 0.90), rgba(19, 171, 170, 0.86));
     }
 
+    .team-row.active { grid-template-columns: 10px minmax(var(--name-col), max-content) 64px 64px 46px 46px; }
     .team-row:last-child { border-bottom: 0; }
     .team-row:not(.active) { filter: saturate(0.75) brightness(0.86); }
 
@@ -82,14 +87,13 @@
     }
 
     .team-name {
-      padding: 0 16px;
-      overflow: hidden;
+      padding: 0 4ch 0 16px;
+      overflow: visible;
       color: rgba(0, 0, 0, 0.78);
       font-size: clamp(20px, 2.5vw, 36px);
       font-weight: 950;
       letter-spacing: 0.04em;
       line-height: 1;
-      text-overflow: ellipsis;
       text-transform: uppercase;
       white-space: nowrap;
       text-shadow: none;
@@ -108,7 +112,8 @@
     }
 
     .runs {
-      background: rgba(255, 255, 255, 0.80);
+      background: var(--runs-bg);
+      color: var(--runs-text);
     }
 
     .out-cell {
@@ -124,8 +129,7 @@
 
     .out-cell.empty { color: transparent; }
     .team-row:not(.active) .out-cell {
-      visibility: hidden;
-      opacity: 0;
+      display: none;
     }
 
     .meta {
@@ -164,16 +168,19 @@
       .scorebug {
         top: 12px;
         left: 10px;
-        width: calc(100vw - 20px);
+        width: max-content;
+        max-width: calc(100vw - 20px);
       }
 
       .team-row {
-        grid-template-columns: 8px minmax(112px, 1fr) 48px 48px 36px 36px;
+        grid-template-columns: 8px minmax(var(--name-col), max-content) 48px 48px;
         min-height: 42px;
       }
 
+      .team-row.active { grid-template-columns: 8px minmax(var(--name-col), max-content) 48px 48px 36px 36px; }
+
       .team-name {
-        padding: 0 10px;
+        padding: 0 4ch 0 10px;
         font-size: 20px;
       }
 
@@ -259,8 +266,11 @@
       els.homeRow.classList.toggle("active", battingTeam === "home");
       els.awayRow.classList.toggle("active", battingTeam === "away");
 
-      els.homeName.textContent = game.homeName || "HOME";
-      els.awayName.textContent = game.awayName || "AWAY";
+      const homeName = game.homeName || "HOME";
+      const awayName = game.awayName || "AWAY";
+      els.homeName.textContent = homeName;
+      els.awayName.textContent = awayName;
+      setNameColumnSize(homeName, awayName);
       els.homeSets.textContent = clampInt(game.homeSetWins, 0, 9);
       els.awaySets.textContent = clampInt(game.awaySetWins, 0, 9);
       els.homeRuns.textContent = clampInt(game.homeRuns, 0, 99);
@@ -270,6 +280,12 @@
 
       setOutCells("home", battingTeam === "home" ? outs : 0);
       setOutCells("away", battingTeam === "away" ? outs : 0);
+    }
+
+    function setNameColumnSize(homeName, awayName) {
+      const longest = Math.max(String(homeName).length, String(awayName).length, 4);
+      const widthCh = Math.min(Math.max(longest + 4, 10), 32);
+      document.documentElement.style.setProperty("--name-col", `${widthCh}ch`);
     }
 
     function formatHalf(value) {

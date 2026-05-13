@@ -73,7 +73,7 @@
 
     .score-preview {
       display: grid;
-      grid-template-columns: 1fr auto auto auto;
+      grid-template-columns: minmax(0, 1fr) repeat(3, minmax(58px, auto));
       overflow: hidden;
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -83,9 +83,9 @@
 
     .score-preview > div { padding: 12px; border-bottom: 1px solid var(--border); }
     .score-preview > div:nth-last-child(-n+4) { border-bottom: 0; }
-    .score-preview .head { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
-    .score-preview .team { font-size: 20px; font-weight: 950; text-transform: uppercase; }
-    .score-preview .num { min-width: 56px; text-align: center; font-size: 24px; font-weight: 950; }
+    .score-preview .head { color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
+    .score-preview .team { min-width: 0; overflow: hidden; font-size: 20px; font-weight: 950; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .score-preview .num { min-width: 58px; text-align: center; font-size: 24px; font-weight: 950; }
     .active-team { color: var(--accent); }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -133,8 +133,9 @@
       .button-grid,
       .meta-line { grid-template-columns: 1fr; }
       button.big { min-height: 58px; }
-      .score-preview { grid-template-columns: 1fr 58px 58px 58px; }
-      .score-preview > div { padding: 10px 8px; }
+      .score-preview { grid-template-columns: minmax(0, 1fr) repeat(3, 50px); }
+      .score-preview > div { padding: 10px 5px; }
+      .score-preview .head { font-size: 8.5px; letter-spacing: 0; }
       .score-preview .team { font-size: 17px; }
       .score-preview .num { min-width: 0; font-size: 21px; }
     }
@@ -278,6 +279,18 @@
     </section>
   </div>
 
+  <div id="confirmModal" class="modal-backdrop hide" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <section class="modal">
+      <h2 id="confirmTitle">Varmistus</h2>
+      <p id="confirmMessage" class="muted"></p>
+      <div class="button-grid">
+        <button id="confirmOkBtn" class="big primary" type="button">OK</button>
+        <button id="confirmCancelBtn" class="big" type="button">Peruuta</button>
+      </div>
+    </section>
+  </div>
+
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -348,8 +361,15 @@
       homePeriodWinnerBtn: document.getElementById("homePeriodWinnerBtn"),
       awayPeriodWinnerBtn: document.getElementById("awayPeriodWinnerBtn"),
       tiePeriodWinnerBtn: document.getElementById("tiePeriodWinnerBtn"),
-      cancelNextPeriodBtn: document.getElementById("cancelNextPeriodBtn")
+      cancelNextPeriodBtn: document.getElementById("cancelNextPeriodBtn"),
+      confirmModal: document.getElementById("confirmModal"),
+      confirmTitle: document.getElementById("confirmTitle"),
+      confirmMessage: document.getElementById("confirmMessage"),
+      confirmOkBtn: document.getElementById("confirmOkBtn"),
+      confirmCancelBtn: document.getElementById("confirmCancelBtn")
     };
+
+    let confirmResolve = null;
 
     const overlayUrl = new URL("overlay.html", location.href);
     overlayUrl.searchParams.set("game", gameId);
@@ -385,6 +405,9 @@
     els.awayPeriodWinnerBtn.addEventListener("click", () => finishPeriod("away"));
     els.tiePeriodWinnerBtn.addEventListener("click", () => finishPeriod("tie"));
     els.cancelNextPeriodBtn.addEventListener("click", closeNextPeriodModal);
+    els.confirmOkBtn.addEventListener("click", () => closeConfirmModal(true));
+    els.confirmCancelBtn.addEventListener("click", () => closeConfirmModal(false));
+    els.confirmModal.addEventListener("click", event => { if (event.target === els.confirmModal) closeConfirmModal(false); });
     els.undoBtn.addEventListener("click", undo);
     els.resetScoreboardBtn.addEventListener("click", resetScoreboard);
 
@@ -545,7 +568,11 @@
       const battingTeam = getBattingTeam();
       const nextBattingTeam = battingTeam === "home" ? "away" : "home";
       const nextName = nextBattingTeam === "home" ? gameState.homeName || "HOME" : gameState.awayName || "AWAY";
-      if (!window.confirm(`Haluatko vaihtaa sisävuoroon ${nextName}?`)) return;
+      const confirmed = await openConfirmModal({
+        title: "Vuoron vaihto",
+        message: `Haluatko vaihtaa sisävuoroon ${nextName}?`
+      });
+      if (!confirmed) return;
 
       const updates = {
         outs: 0,
@@ -572,6 +599,23 @@
 
     function closeNextPeriodModal() {
       els.nextPeriodModal.classList.add("hide");
+    }
+
+    function openConfirmModal({ title = "Varmistus", message = "" } = {}) {
+      els.confirmTitle.textContent = title;
+      els.confirmMessage.textContent = message;
+      els.confirmModal.classList.remove("hide");
+      return new Promise(resolve => {
+        confirmResolve = resolve;
+      });
+    }
+
+    function closeConfirmModal(result) {
+      els.confirmModal.classList.add("hide");
+      if (confirmResolve) {
+        confirmResolve(Boolean(result));
+        confirmResolve = null;
+      }
     }
 
     async function finishPeriod(winner) {
@@ -603,7 +647,11 @@
     }
 
     async function resetScoreboard() {
-      if (!window.confirm("Nollataanko koko pistetaulukko? Joukkueiden nimet ja asetukset säilyvät.")) return;
+      const confirmed = await openConfirmModal({
+        title: "Nollaa pistetaulukko",
+        message: "Nollataanko koko pistetaulukko? Joukkueiden nimet ja asetukset säilyvät."
+      });
+      if (!confirmed) return;
       const updates = {
         homeRuns: 0,
         awayRuns: 0,
@@ -624,7 +672,11 @@
       if (!signedIn || !gameState) return;
       const stack = getUndoStack();
       if (!stack.length) return;
-      if (!window.confirm("Haluatko varmasti kumota aikaisemman tuloksen?")) return;
+      const confirmed = await openConfirmModal({
+        title: "Undo",
+        message: "Haluatko varmasti kumota aikaisemman tuloksen?"
+      });
+      if (!confirmed) return;
       const previous = stack[stack.length - 1];
       const remainingStack = stack.slice(0, -1);
       await update(gameRef, { ...previous, undoStack: remainingStack, updatedAt: Date.now() });

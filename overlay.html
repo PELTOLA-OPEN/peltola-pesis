@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peltola Pesis Overlay</title>
+  <style>
+    :root {
+      --panel: rgba(0, 0, 0, 0.58);
+      --panel-strong: rgba(0, 0, 0, 0.72);
+      --active: rgba(216, 241, 90, 0.92);
+      --active-text: #0b0f10;
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.68);
+      --line: rgba(255, 255, 255, 0.24);
+      --cell: rgba(255, 255, 255, 0.88);
+      --cell-text: #11161a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.debug { background: linear-gradient(135deg, #295b41, #1b2838); }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      color: var(--text);
+      pointer-events: none;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+    }
+
+    .hidden { display: none !important; }
+
+    .scorebug {
+      position: absolute;
+      top: 4vh;
+      right: 3.5vw;
+      display: grid;
+      gap: 6px;
+      width: min(470px, 44vw);
+    }
+
+    .teams {
+      display: grid;
+      overflow: hidden;
+      border-radius: 3px;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+    }
+
+    .team-row {
+      display: grid;
+      grid-template-columns: 10px minmax(128px, 1fr) 64px 64px 46px 46px;
+      min-height: clamp(39px, 4.3vw, 58px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.22);
+      background: linear-gradient(90deg, rgba(31, 210, 196, 0.90), rgba(19, 171, 170, 0.86));
+    }
+
+    .team-row:last-child { border-bottom: 0; }
+    .team-row:not(.active) { filter: saturate(0.75) brightness(0.86); }
+
+    .team-strip.home { background: #d70d18; }
+    .team-strip.away { background: #101cff; }
+
+    .team-name,
+    .set-wins,
+    .runs,
+    .out-cell {
+      display: grid;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .team-name {
+      padding: 0 16px;
+      overflow: hidden;
+      color: rgba(0, 0, 0, 0.78);
+      font-size: clamp(20px, 2.5vw, 36px);
+      font-weight: 950;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: none;
+    }
+
+    .set-wins,
+    .runs {
+      justify-items: center;
+      border-left: 1px solid rgba(0, 0, 0, 0.13);
+      background: var(--cell);
+      color: var(--cell-text);
+      font-size: clamp(22px, 2.6vw, 36px);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      text-shadow: none;
+    }
+
+    .runs {
+      background: rgba(255, 255, 255, 0.80);
+    }
+
+    .out-cell {
+      justify-items: center;
+      border-left: 1px solid rgba(0, 0, 0, 0.13);
+      background: rgba(16, 170, 166, 0.84);
+      color: rgba(0, 0, 0, 0.78);
+      font-size: clamp(20px, 2.3vw, 32px);
+      font-weight: 950;
+      line-height: 1;
+      text-shadow: none;
+    }
+
+    .out-cell.empty { color: transparent; }
+    .team-row:not(.active) .out-cell { opacity: 0.18; }
+
+    .meta {
+      display: inline-grid;
+      grid-template-columns: 62px 62px;
+      width: max-content;
+      margin-left: 10px;
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+    }
+
+    .meta-cell {
+      display: grid;
+      place-items: center;
+      min-height: clamp(31px, 3.1vw, 43px);
+      border-right: 1px solid rgba(0, 0, 0, 0.20);
+      background: rgba(255, 255, 255, 0.88);
+      color: #11161a;
+      font-size: clamp(17px, 1.8vw, 25px);
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      text-shadow: none;
+    }
+
+    .meta-cell:last-child { border-right: 0; }
+
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 760px) {
+      .scorebug {
+        top: 12px;
+        right: 10px;
+        width: calc(100vw - 20px);
+      }
+
+      .team-row {
+        grid-template-columns: 8px minmax(112px, 1fr) 48px 48px 36px 36px;
+        min-height: 42px;
+      }
+
+      .team-name {
+        padding: 0 10px;
+        font-size: 20px;
+      }
+
+      .set-wins,
+      .runs,
+      .out-cell { font-size: 21px; }
+
+      .meta { grid-template-columns: 50px 50px; margin-left: 8px; }
+      .meta-cell { min-height: 32px; font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section id="scorebug" class="scorebug hidden" aria-live="polite">
+      <div class="teams">
+        <div id="homeRow" class="team-row">
+          <div class="team-strip home"></div>
+          <div id="homeName" class="team-name">HOME</div>
+          <div id="homeSets" class="set-wins">0</div>
+          <div id="homeRuns" class="runs">0</div>
+          <div id="homeOut1" class="out-cell empty">X</div>
+          <div id="homeOut2" class="out-cell empty">X</div>
+        </div>
+        <div id="awayRow" class="team-row">
+          <div class="team-strip away"></div>
+          <div id="awayName" class="team-name">AWAY</div>
+          <div id="awaySets" class="set-wins">0</div>
+          <div id="awayRuns" class="runs">0</div>
+          <div id="awayOut1" class="out-cell empty">X</div>
+          <div id="awayOut2" class="out-cell empty">X</div>
+        </div>
+      </div>
+      <div class="meta">
+        <div id="period" class="meta-cell">1.</div>
+        <div id="inning" class="meta-cell">1A</div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    import { firebaseConfig } from "./firebase-config.js";
+
+    const params = new URLSearchParams(location.search);
+    const gameId = params.get("game") || "main";
+    if (params.get("debug") === "1") document.body.classList.add("debug");
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const els = {
+      scorebug: document.getElementById("scorebug"),
+      homeRow: document.getElementById("homeRow"),
+      awayRow: document.getElementById("awayRow"),
+      homeName: document.getElementById("homeName"),
+      awayName: document.getElementById("awayName"),
+      homeSets: document.getElementById("homeSets"),
+      awaySets: document.getElementById("awaySets"),
+      homeRuns: document.getElementById("homeRuns"),
+      awayRuns: document.getElementById("awayRuns"),
+      homeOut1: document.getElementById("homeOut1"),
+      homeOut2: document.getElementById("homeOut2"),
+      awayOut1: document.getElementById("awayOut1"),
+      awayOut2: document.getElementById("awayOut2"),
+      period: document.getElementById("period"),
+      inning: document.getElementById("inning")
+    };
+
+    onValue(ref(db, `games/${gameId}`), snapshot => render(snapshot.val()));
+
+    function render(game) {
+      if (!game || game.showOverlay === false) {
+        els.scorebug.classList.add("hidden");
+        return;
+      }
+
+      els.scorebug.classList.remove("hidden");
+      const battingTeam = game.battingTeam === "away" ? "away" : "home";
+      const outs = clampInt(game.outs, 0, 2);
+
+      els.homeRow.classList.toggle("active", battingTeam === "home");
+      els.awayRow.classList.toggle("active", battingTeam === "away");
+
+      els.homeName.textContent = game.homeName || "HOME";
+      els.awayName.textContent = game.awayName || "AWAY";
+      els.homeSets.textContent = clampInt(game.homeSetWins, 0, 9);
+      els.awaySets.textContent = clampInt(game.awaySetWins, 0, 9);
+      els.homeRuns.textContent = clampInt(game.homeRuns, 0, 99);
+      els.awayRuns.textContent = clampInt(game.awayRuns, 0, 99);
+      els.period.textContent = `${clampInt(game.period, 1, 9)}.`;
+      els.inning.textContent = `${clampInt(game.inningNumber, 1, 9)}${game.inningHalf === "B" ? "B" : "A"}`;
+
+      setOutCells("home", battingTeam === "home" ? outs : 0);
+      setOutCells("away", battingTeam === "away" ? outs : 0);
+    }
+
+    function setOutCells(team, outs) {
+      els[`${team}Out1`].classList.toggle("empty", outs < 1);
+      els[`${team}Out2`].classList.toggle("empty", outs < 2);
+    }
+
+    function clampInt(value, min, max) {
+      const number = Number.parseInt(value, 10);
+      if (!Number.isFinite(number)) return min;
+      return Math.max(min, Math.min(max, number));
+    }
+  </script>
+</body>
+</html>

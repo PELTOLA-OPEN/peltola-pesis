@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Peltola Pesis Control</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101318;
+      --panel: #191f28;
+      --panel-2: #202835;
+      --text: #f7f7f7;
+      --muted: #aeb8c7;
+      --border: rgba(255, 255, 255, 0.12);
+      --input: #0c0f14;
+      --danger: #5c1f25;
+      --danger-border: #a84952;
+      --accent: #d8f15a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body { padding: 14px; }
+    main { max-width: 760px; margin: 0 auto; padding-bottom: 44px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 6px; font-size: 28px; }
+    h2 { margin-bottom: 12px; font-size: 20px; }
+    p, label, .muted { color: var(--muted); }
+
+    .card {
+      margin: 14px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .between { justify-content: space-between; }
+
+    label { display: grid; gap: 6px; font-size: 13px; font-weight: 750; }
+    input, button, select { min-height: 44px; border-radius: 12px; font: inherit; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); background: var(--input); color: var(--text); }
+    input[type="checkbox"] { width: 22px; min-height: 22px; }
+
+    button { padding: 10px 13px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-weight: 850; cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: 0.45; }
+    button.primary { border-color: rgba(216, 241, 90, 0.42); color: var(--accent); }
+    button.danger { border-color: var(--danger-border); background: var(--danger); }
+    button.big { min-height: 60px; font-size: 18px; }
+
+    .hide { display: none !important; }
+    .status { min-height: 22px; margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .url-box { overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--input); color: var(--muted); font-size: 13px; }
+
+    .score-preview {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel-2);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-preview > div { padding: 12px; border-bottom: 1px solid var(--border); }
+    .score-preview > div:nth-last-child(-n+3) { border-bottom: 0; }
+    .score-preview .head { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .score-preview .team { font-size: 20px; font-weight: 950; text-transform: uppercase; }
+    .score-preview .num { min-width: 52px; text-align: center; font-size: 24px; font-weight: 950; }
+    .active-team { color: var(--accent); }
+
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .button-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--input);
+      font-weight: 900;
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      .card { padding: 13px; border-radius: 16px; }
+      .button-grid,
+      .button-grid.three { grid-template-columns: 1fr; }
+      button.big { min-height: 56px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Peltola Pesis control</h1>
+      <p class="muted">Puhelimella ylläpidettävä pesäpallo-scorebug.</p>
+    </header>
+
+    <section class="card" id="authCard">
+      <div class="row between">
+        <h2>Login</h2>
+        <div id="authState" class="muted">Not signed in</div>
+      </div>
+      <div id="loginForm" class="grid">
+        <label>Email
+          <input id="email" type="email" autocomplete="email" placeholder="scorekeeper@example.com" />
+        </label>
+        <label>Password
+          <input id="password" type="password" autocomplete="current-password" placeholder="Password" />
+        </label>
+        <label>&nbsp;
+          <button id="loginBtn" type="button">Sign in</button>
+        </label>
+      </div>
+      <div id="signedInTools" class="row hide">
+        <button id="logoutBtn" type="button">Sign out</button>
+      </div>
+      <div id="authStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Overlay URL</h2>
+      <p class="muted">Lisää tämä OBS:ään Browser Source -lähteeksi.</p>
+      <div id="overlayUrl" class="url-box"></div>
+    </section>
+
+    <section id="controlSections" class="hide">
+      <section class="card">
+        <h2>Setup</h2>
+        <div class="grid">
+          <label>Kotijoukkue
+            <input id="homeName" type="text" placeholder="KIPA" />
+          </label>
+          <label>Vierasjoukkue
+            <input id="awayName" type="text" placeholder="VETO" />
+          </label>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <label class="row" style="display:flex; gap:8px;">
+            <input id="showOverlay" type="checkbox" /> Näytä overlay
+          </label>
+          <button id="saveSetupBtn" type="button">Save setup</button>
+          <button id="resetGameBtn" class="danger" type="button">Reset game</button>
+        </div>
+        <div id="setupStatus" class="status"></div>
+      </section>
+
+      <section class="card">
+        <h2>Tilanne</h2>
+        <div class="score-preview">
+          <div class="head">Joukkue</div><div class="head num">Jaksot</div><div class="head num">Juoksut</div>
+          <div id="homePreviewName" class="team">HOME</div><div id="homePreviewSets" class="num">0</div><div id="homePreviewRuns" class="num">0</div>
+          <div id="awayPreviewName" class="team">AWAY</div><div id="awayPreviewSets" class="num">0</div><div id="awayPreviewRuns" class="num">0</div>
+        </div>
+        <div class="meta-line" style="margin-top:12px;">
+          <span id="periodPreview">1. jakso</span>
+          <span id="inningPreview">1A</span>
+          <span id="outsPreview">Palot: 0</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Pelin aikana</h2>
+        <div class="button-grid">
+          <button id="homeRunBtn" class="big primary" type="button">Kotijoukkue +1</button>
+          <button id="awayRunBtn" class="big primary" type="button">Vierasjoukkue +1</button>
+        </div>
+        <div class="button-grid" style="margin-top:10px;">
+          <button id="outBtn" class="big" type="button">Palo +</button>
+          <button id="changeTurnBtn" class="big" type="button">Vuoron vaihto</button>
+        </div>
+        <div class="button-grid three" style="margin-top:10px;">
+          <button id="homeSetBtn" type="button">Kotijoukkue jakso +</button>
+          <button id="awaySetBtn" type="button">Vierasjoukkue jakso +</button>
+          <button id="nextPeriodBtn" type="button">Jakso +</button>
+        </div>
+        <div class="button-grid three" style="margin-top:10px;">
+          <button id="homeRunMinusBtn" type="button">Koti -1</button>
+          <button id="awayRunMinusBtn" type="button">Vieras -1</button>
+          <button id="undoBtn" class="danger" type="button">Undo</button>
+        </div>
+        <div id="gameStatus" class="status"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { firebaseConfig } from "./firebase-config.js";
+
+    const params = new URLSearchParams(location.search);
+    const gameId = params.get("game") || "main";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const gameRef = ref(db, `games/${gameId}`);
+
+    let gameState = null;
+    let signedIn = false;
+
+    const els = {
+      authState: document.getElementById("authState"),
+      authStatus: document.getElementById("authStatus"),
+      loginForm: document.getElementById("loginForm"),
+      signedInTools: document.getElementById("signedInTools"),
+      controlSections: document.getElementById("controlSections"),
+      email: document.getElementById("email"),
+      password: document.getElementById("password"),
+      loginBtn: document.getElementById("loginBtn"),
+      logoutBtn: document.getElementById("logoutBtn"),
+      overlayUrl: document.getElementById("overlayUrl"),
+      homeName: document.getElementById("homeName"),
+      awayName: document.getElementById("awayName"),
+      showOverlay: document.getElementById("showOverlay"),
+      saveSetupBtn: document.getElementById("saveSetupBtn"),
+      resetGameBtn: document.getElementById("resetGameBtn"),
+      setupStatus: document.getElementById("setupStatus"),
+      homePreviewName: document.getElementById("homePreviewName"),
+      awayPreviewName: document.getElementById("awayPreviewName"),
+      homePreviewSets: document.getElementById("homePreviewSets"),
+      awayPreviewSets: document.getElementById("awayPreviewSets"),
+      homePreviewRuns: document.getElementById("homePreviewRuns"),
+      awayPreviewRuns: document.getElementById("awayPreviewRuns"),
+      periodPreview: document.getElementById("periodPreview"),
+      inningPreview: document.getElementById("inningPreview"),
+      outsPreview: document.getElementById("outsPreview"),
+      homeRunBtn: document.getElementById("homeRunBtn"),
+      awayRunBtn: document.getElementById("awayRunBtn"),
+      outBtn: document.getElementById("outBtn"),
+      changeTurnBtn: document.getElementById("changeTurnBtn"),
+      homeSetBtn: document.getElementById("homeSetBtn"),
+      awaySetBtn: document.getElementById("awaySetBtn"),
+      nextPeriodBtn: document.getElementById("nextPeriodBtn"),
+      homeRunMinusBtn: document.getElementById("homeRunMinusBtn"),
+      awayRunMinusBtn: document.getElementById("awayRunMinusBtn"),
+      undoBtn: document.getElementById("undoBtn"),
+      gameStatus: document.getElementById("gameStatus")
+    };
+
+    const overlayUrl = new URL("overlay.html", location.href);
+    overlayUrl.searchParams.set("game", gameId);
+    els.overlayUrl.textContent = overlayUrl.href;
+
+    els.loginBtn.addEventListener("click", async () => {
+      try {
+        els.authStatus.textContent = "Signing in...";
+        await signInWithEmailAndPassword(auth, els.email.value.trim(), els.password.value);
+        els.password.value = "";
+        els.authStatus.textContent = "Signed in.";
+      } catch (error) {
+        els.authStatus.textContent = readableFirebaseError(error);
+      }
+    });
+
+    els.logoutBtn.addEventListener("click", () => signOut(auth));
+    els.saveSetupBtn.addEventListener("click", saveSetup);
+    els.resetGameBtn.addEventListener("click", resetGame);
+    els.showOverlay.addEventListener("change", () => saveAction({ showOverlay: els.showOverlay.checked }, "Overlay visibility updated."));
+    els.homeRunBtn.addEventListener("click", () => adjustNumber("homeRuns", 1, "Kotijoukkue +1."));
+    els.awayRunBtn.addEventListener("click", () => adjustNumber("awayRuns", 1, "Vierasjoukkue +1."));
+    els.homeRunMinusBtn.addEventListener("click", () => adjustNumber("homeRuns", -1, "Kotijoukkue -1."));
+    els.awayRunMinusBtn.addEventListener("click", () => adjustNumber("awayRuns", -1, "Vierasjoukkue -1."));
+    els.homeSetBtn.addEventListener("click", () => adjustNumber("homeSetWins", 1, "Kotijoukkue jakso +1."));
+    els.awaySetBtn.addEventListener("click", () => adjustNumber("awaySetWins", 1, "Vierasjoukkue jakso +1."));
+    els.outBtn.addEventListener("click", addOut);
+    els.changeTurnBtn.addEventListener("click", changeTurn);
+    els.nextPeriodBtn.addEventListener("click", nextPeriod);
+    els.undoBtn.addEventListener("click", undo);
+
+    onAuthStateChanged(auth, async user => {
+      signedIn = Boolean(user);
+      els.authState.textContent = user ? `Signed in: ${user.email}` : "Not signed in";
+      els.loginForm.classList.toggle("hide", Boolean(user));
+      els.signedInTools.classList.toggle("hide", !user);
+      els.controlSections.classList.toggle("hide", !user);
+      if (user) await initGameIfMissing();
+    });
+
+    onValue(gameRef, snapshot => {
+      gameState = snapshot.val();
+      render();
+    });
+
+    function defaultGame() {
+      return {
+        homeName: "HOME",
+        awayName: "AWAY",
+        homeRuns: 0,
+        awayRuns: 0,
+        homeSetWins: 0,
+        awaySetWins: 0,
+        period: 1,
+        inningNumber: 1,
+        inningHalf: "A",
+        battingTeam: "home",
+        outs: 0,
+        showOverlay: true,
+        undo: null,
+        updatedAt: Date.now()
+      };
+    }
+
+    async function initGameIfMissing() {
+      const snapshot = await get(gameRef);
+      if (!snapshot.exists()) await set(gameRef, defaultGame());
+    }
+
+    function render() {
+      if (!gameState) return;
+      els.homeName.value = gameState.homeName || "";
+      els.awayName.value = gameState.awayName || "";
+      els.showOverlay.checked = gameState.showOverlay !== false;
+
+      const homeName = gameState.homeName || "HOME";
+      const awayName = gameState.awayName || "AWAY";
+      const battingTeam = gameState.battingTeam === "away" ? "away" : "home";
+
+      els.homePreviewName.textContent = homeName;
+      els.awayPreviewName.textContent = awayName;
+      els.homePreviewName.classList.toggle("active-team", battingTeam === "home");
+      els.awayPreviewName.classList.toggle("active-team", battingTeam === "away");
+      els.homePreviewSets.textContent = clampInt(gameState.homeSetWins, 0, 9);
+      els.awayPreviewSets.textContent = clampInt(gameState.awaySetWins, 0, 9);
+      els.homePreviewRuns.textContent = clampInt(gameState.homeRuns, 0, 99);
+      els.awayPreviewRuns.textContent = clampInt(gameState.awayRuns, 0, 99);
+      els.periodPreview.textContent = `${clampInt(gameState.period, 1, 9)}. jakso`;
+      els.inningPreview.textContent = `${clampInt(gameState.inningNumber, 1, 9)}${gameState.inningHalf === "B" ? "B" : "A"}`;
+      els.outsPreview.textContent = `Palot: ${clampInt(gameState.outs, 0, 2)}`;
+      els.homeRunBtn.textContent = `${homeName} +1`;
+      els.awayRunBtn.textContent = `${awayName} +1`;
+      els.homeSetBtn.textContent = `${homeName} jakso +`;
+      els.awaySetBtn.textContent = `${awayName} jakso +`;
+      els.undoBtn.disabled = !gameState.undo;
+    }
+
+    async function saveSetup() {
+      await saveAction({
+        homeName: els.homeName.value.trim() || "HOME",
+        awayName: els.awayName.value.trim() || "AWAY",
+        showOverlay: els.showOverlay.checked
+      }, "Setup saved.");
+    }
+
+    async function adjustNumber(field, delta, message) {
+      const current = clampInt(gameState?.[field], 0, field.includes("Runs") ? 99 : 9);
+      await saveAction({ [field]: Math.max(0, current + delta) }, message);
+    }
+
+    async function addOut() {
+      const outs = clampInt(gameState?.outs, 0, 2);
+      await saveAction({ outs: Math.min(2, outs + 1) }, "Palo lisätty.");
+    }
+
+    async function changeTurn() {
+      const half = gameState?.inningHalf === "B" ? "B" : "A";
+      const inningNumber = clampInt(gameState?.inningNumber, 1, 9);
+      const battingTeam = gameState?.battingTeam === "away" ? "away" : "home";
+      const updates = {
+        outs: 0,
+        battingTeam: battingTeam === "home" ? "away" : "home"
+      };
+      if (half === "A") {
+        updates.inningHalf = "B";
+      } else {
+        updates.inningHalf = "A";
+        updates.inningNumber = Math.min(9, inningNumber + 1);
+      }
+      await saveAction(updates, "Vuoro vaihdettu.");
+    }
+
+    async function nextPeriod() {
+      const period = clampInt(gameState?.period, 1, 9);
+      await saveAction({
+        period: Math.min(9, period + 1),
+        inningNumber: 1,
+        inningHalf: "A",
+        battingTeam: "home",
+        outs: 0,
+        homeRuns: 0,
+        awayRuns: 0
+      }, "Jakso vaihdettu ja juoksut nollattu.");
+    }
+
+    async function resetGame() {
+      if (!window.confirm("Resetoi koko peli? Joukkueiden nimet säilyvät.")) return;
+      const homeName = gameState?.homeName || "HOME";
+      const awayName = gameState?.awayName || "AWAY";
+      await saveAction({ ...defaultGame(), homeName, awayName, undo: null }, "Game reset.");
+    }
+
+    async function undo() {
+      if (!signedIn || !gameState?.undo) return;
+      const previous = gameState.undo;
+      await update(gameRef, { ...previous, undo: null, updatedAt: Date.now() });
+      els.gameStatus.textContent = "Undo done.";
+    }
+
+    async function saveAction(updates, message) {
+      if (!signedIn || !gameState) return;
+      const previous = stripUndo(gameState);
+      await update(gameRef, { ...updates, undo: previous, updatedAt: Date.now() });
+      els.gameStatus.textContent = message;
+    }
+
+    function stripUndo(value) {
+      const clone = { ...(value || {}) };
+      delete clone.undo;
+      return clone;
+    }
+
+    function clampInt(value, min, max) {
+      const number = Number.parseInt(value, 10);
+      if (!Number.isFinite(number)) return min;
+      return Math.max(min, Math.min(max, number));
+    }
+
+    function readableFirebaseError(error) {
+      return error?.message || "Firebase error.";
+    }
+  </script>
+</body>
+</html>

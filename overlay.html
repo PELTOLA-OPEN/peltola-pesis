@@ -18,6 +18,7 @@
       --runs-bg: #005e5f;
       --runs-text: #ffffff;
       --name-col: 14ch;
+      --overlay-scale: 1;
     }
 
     * { box-sizing: border-box; }
@@ -53,6 +54,8 @@
       gap: 6px;
       width: max-content;
       max-width: calc(100vw - 7vw);
+      transform: scale(var(--overlay-scale));
+      transform-origin: top left;
     }
 
     .teams {
@@ -279,6 +282,7 @@
       els.homeName.textContent = homeName;
       els.awayName.textContent = awayName;
       setNameColumnSize(homeName, awayName);
+      setOverlayScale(game.overlayScale);
       els.homeSets.textContent = clampInt(game.homeSetWins, 0, 9);
       els.awaySets.textContent = clampInt(game.awaySetWins, 0, 9);
       els.homeRuns.textContent = clampInt(game.homeRuns, 0, 99);
@@ -288,6 +292,11 @@
 
       setOutCells("home", battingTeam === "home" ? outs : 0);
       setOutCells("away", battingTeam === "away" ? outs : 0);
+    }
+
+    function setOverlayScale(value) {
+      const scale = clampInt(value, 50, 180) / 100;
+      document.documentElement.style.setProperty("--overlay-scale", String(scale));
     }
 
     function setNameColumnSize(homeName, awayName) {

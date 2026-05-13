@@ -53,20 +53,26 @@
     input, button, select { min-height: 44px; border-radius: 12px; font: inherit; }
     input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); background: var(--input); color: var(--text); }
     input[type="checkbox"] { width: 22px; min-height: 22px; }
+    input[type="range"] { padding: 0; accent-color: var(--accent); }
 
     button { padding: 10px 13px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-weight: 850; cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: 0.45; }
     button.primary { border-color: rgba(216, 241, 90, 0.42); color: var(--accent); }
     button.danger { border-color: var(--danger-border); background: var(--danger); }
-    button.big { min-height: 60px; font-size: 18px; }
+    button.big { min-height: 62px; font-size: 18px; }
+    button .sub { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 800; }
 
     .hide { display: none !important; }
     .status { min-height: 22px; margin-top: 8px; color: var(--muted); font-size: 13px; }
     .url-box { overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--input); color: var(--muted); font-size: 13px; }
 
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+    .tab-btn { min-height: 50px; background: var(--panel); }
+    .tab-btn.active { border-color: rgba(216, 241, 90, 0.55); color: var(--accent); background: #232c36; }
+
     .score-preview {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       overflow: hidden;
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -75,32 +81,61 @@
     }
 
     .score-preview > div { padding: 12px; border-bottom: 1px solid var(--border); }
-    .score-preview > div:nth-last-child(-n+3) { border-bottom: 0; }
+    .score-preview > div:nth-last-child(-n+4) { border-bottom: 0; }
     .score-preview .head { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
     .score-preview .team { font-size: 20px; font-weight: 950; text-transform: uppercase; }
-    .score-preview .num { min-width: 52px; text-align: center; font-size: 24px; font-weight: 950; }
+    .score-preview .num { min-width: 56px; text-align: center; font-size: 24px; font-weight: 950; }
     .active-team { color: var(--accent); }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .button-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .single-grid { display: grid; gap: 10px; }
 
     .meta-line {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meta-line span {
+      display: block;
       padding: 12px;
       border: 1px solid var(--border);
       border-radius: 14px;
       background: var(--input);
       font-weight: 900;
+      text-align: center;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.62);
+      z-index: 20;
+    }
+
+    .modal {
+      width: min(440px, 100%);
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
     }
 
     @media (max-width: 560px) {
       body { padding: 10px; }
       .card { padding: 13px; border-radius: 16px; }
       .button-grid,
-      .button-grid.three { grid-template-columns: 1fr; }
-      button.big { min-height: 56px; }
+      .meta-line { grid-template-columns: 1fr; }
+      button.big { min-height: 58px; }
+      .score-preview { grid-template-columns: 1fr 58px 58px 58px; }
+      .score-preview > div { padding: 10px 8px; }
+      .score-preview .team { font-size: 17px; }
+      .score-preview .num { min-width: 0; font-size: 21px; }
     }
   </style>
 </head>
@@ -140,76 +175,103 @@
     </section>
 
     <section id="controlSections" class="hide">
-      <section class="card">
-        <h2>Setup</h2>
-        <div class="grid">
-          <label>Kotijoukkue
-            <input id="homeName" type="text" placeholder="KIPA" />
-          </label>
-          <label>Vierasjoukkue
-            <input id="awayName" type="text" placeholder="VETO" />
-          </label>
-          <label>Jaksojen määrä
-            <input id="periodCount" type="number" min="1" max="9" step="1" />
-          </label>
-          <label>Vuoropareja per jakso
-            <input id="inningPairsPerPeriod" type="number" min="1" max="9" step="1" />
-          </label>
-        </div>
-        <div class="row" style="margin-top:12px;">
-          <label class="row" style="display:flex; gap:8px;">
-            <input id="showOverlay" type="checkbox" /> Näytä overlay
-          </label>
-          <button id="saveSetupBtn" type="button">Save setup</button>
-        </div>
-        <div id="setupStatus" class="status"></div>
+      <nav class="tabs" aria-label="Control panel tabs">
+        <button id="setupTabBtn" class="tab-btn active" type="button">Setup</button>
+        <button id="scoringTabBtn" class="tab-btn" type="button">Scoring</button>
+      </nav>
+
+      <section id="setupTab">
+        <section class="card">
+          <h2>Setup</h2>
+          <div class="grid">
+            <label>Kotijoukkue
+              <input id="homeName" type="text" placeholder="KIPA" />
+            </label>
+            <label>Vierasjoukkue
+              <input id="awayName" type="text" placeholder="VETO" />
+            </label>
+            <label>Jaksojen määrä
+              <input id="periodCount" type="number" min="1" max="9" step="1" />
+            </label>
+            <label>Vuoropareja per jakso
+              <input id="inningPairsPerPeriod" type="number" min="1" max="9" step="1" />
+            </label>
+          </div>
+          <div class="grid" style="margin-top:12px;">
+            <label>Overlayn koko: <span id="overlayScaleLabel">100%</span>
+              <input id="overlayScale" type="range" min="50" max="180" step="5" />
+            </label>
+            <label>Koko prosentteina
+              <input id="overlayScaleNumber" type="number" min="50" max="180" step="5" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <label class="row" style="display:flex; gap:8px;">
+              <input id="showOverlay" type="checkbox" /> Näytä overlay
+            </label>
+            <button id="saveSetupBtn" type="button">Save setup</button>
+          </div>
+          <div id="setupStatus" class="status"></div>
+        </section>
       </section>
 
-      <section class="card">
-        <h2>Tilanne</h2>
-        <div class="score-preview">
-          <div class="head">Joukkue</div><div class="head num">Jaksot</div><div class="head num">Juoksut</div>
-          <div id="homePreviewName" class="team">HOME</div><div id="homePreviewSets" class="num">0</div><div id="homePreviewRuns" class="num">0</div>
-          <div id="awayPreviewName" class="team">AWAY</div><div id="awayPreviewSets" class="num">0</div><div id="awayPreviewRuns" class="num">0</div>
-        </div>
-        <div class="meta-line" style="margin-top:12px;">
-          <span id="periodPreview">1. jakso</span>
-          <span id="inningPreview">1A</span>
-          <span id="outsPreview">Palot: 0</span>
-        </div>
-      </section>
+      <section id="scoringTab" class="hide">
+        <section class="card">
+          <h2>Tilanne</h2>
+          <div class="score-preview">
+            <div class="head">Joukkue</div><div class="head num">Jaksot</div><div class="head num">Juoksut</div><div class="head num">Palot</div>
+            <div id="homePreviewName" class="team">HOME</div><div id="homePreviewSets" class="num">0</div><div id="homePreviewRuns" class="num">0</div><div id="homePreviewOuts" class="num">-</div>
+            <div id="awayPreviewName" class="team">AWAY</div><div id="awayPreviewSets" class="num">0</div><div id="awayPreviewRuns" class="num">0</div><div id="awayPreviewOuts" class="num">-</div>
+          </div>
+          <div class="meta-line">
+            <span id="periodPreview">Jakso: 1/2</span>
+            <span id="inningPreview">Vuoropari: 1A</span>
+            <span id="battingPreview">Sisällä: HOME</span>
+          </div>
+        </section>
 
-      <section class="card">
-        <h2>Pelin aikana</h2>
-        <div class="button-grid">
-          <button id="homeRunBtn" class="big primary" type="button">Kotijoukkue +1</button>
-          <button id="awayRunBtn" class="big primary" type="button">Vierasjoukkue +1</button>
-        </div>
-        <div class="button-grid" style="margin-top:10px;">
-          <button id="outBtn" class="big" type="button">Palo +</button>
-          <button id="changeTurnBtn" class="big" type="button">Vuoron vaihto</button>
-        </div>
-        <div class="button-grid three" style="margin-top:10px;">
-          <button id="homeSetBtn" type="button">Kotijoukkue jakso +</button>
-          <button id="awaySetBtn" type="button">Vierasjoukkue jakso +</button>
-          <button id="nextPeriodBtn" type="button">Jakso +</button>
-        </div>
-        <div class="button-grid three" style="margin-top:10px;">
-          <button id="homeRunMinusBtn" type="button">Koti -1</button>
-          <button id="awayRunMinusBtn" type="button">Vieras -1</button>
-          <button id="undoBtn" class="danger" type="button">Undo</button>
-        </div>
-        <div id="gameStatus" class="status"></div>
-      </section>
+        <section class="card">
+          <h2>Pelin aikana</h2>
+          <div class="button-grid">
+            <button id="activeRunPlusBtn" class="big primary" type="button">+1 juoksu</button>
+            <button id="activeRunMinusBtn" class="big" type="button">-1 juoksu</button>
+          </div>
+          <div class="button-grid" style="margin-top:10px;">
+            <button id="outBtn" class="big" type="button">Palo +</button>
+            <button id="changeTurnBtn" class="big" type="button">Vuoron vaihto<span id="nextBatterSub" class="sub"></span></button>
+          </div>
+          <div class="single-grid" style="margin-top:16px;">
+            <button id="openNextPeriodBtn" class="big primary" type="button">Seuraava jakso</button>
+          </div>
+          <div class="button-grid" style="margin-top:10px;">
+            <button id="undoBtn" class="danger" type="button">Undo</button>
+          </div>
+          <div id="gameStatus" class="status"></div>
+        </section>
 
-      <section class="card">
-        <h2>Manuaalinen nollaus</h2>
-        <p class="muted">Nollaa juoksut, jaksovoitot, jakson, vuoroparin ja palot. Joukkueiden nimet ja ottelun asetukset säilyvät.</p>
-        <button id="resetScoreboardBtn" class="danger big" type="button">Nollaa koko pistetaulukko</button>
-        <div id="resetStatus" class="status"></div>
+        <section class="card">
+          <h2>Manuaalinen nollaus</h2>
+          <p class="muted">Nollaa juoksut, jaksovoitot, jakson, vuoroparin ja palot. Joukkueiden nimet ja ottelun asetukset säilyvät.</p>
+          <button id="resetScoreboardBtn" class="danger big" type="button">Nollaa koko pistetaulukko</button>
+          <div id="resetStatus" class="status"></div>
+        </section>
       </section>
     </section>
   </main>
+
+  <div id="nextPeriodModal" class="modal-backdrop hide" role="dialog" aria-modal="true" aria-labelledby="nextPeriodTitle">
+    <section class="modal">
+      <h2 id="nextPeriodTitle">Kumpi voitti jakson?</h2>
+      <p id="nextPeriodHelp" class="muted">Valinta lisää jaksopisteen ja siirtää pelin seuraavaan jaksoon.</p>
+      <div class="button-grid">
+        <button id="homePeriodWinnerBtn" class="big primary" type="button">Kotijoukkue</button>
+        <button id="awayPeriodWinnerBtn" class="big primary" type="button">Vierasjoukkue</button>
+      </div>
+      <div class="single-grid" style="margin-top:10px;">
+        <button id="cancelNextPeriodBtn" type="button">Peruuta</button>
+      </div>
+    </section>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
@@ -227,6 +289,7 @@
 
     let gameState = null;
     let signedIn = false;
+    let activeTab = "setup";
 
     const els = {
       authState: document.getElementById("authState"),
@@ -239,10 +302,17 @@
       loginBtn: document.getElementById("loginBtn"),
       logoutBtn: document.getElementById("logoutBtn"),
       overlayUrl: document.getElementById("overlayUrl"),
+      setupTabBtn: document.getElementById("setupTabBtn"),
+      scoringTabBtn: document.getElementById("scoringTabBtn"),
+      setupTab: document.getElementById("setupTab"),
+      scoringTab: document.getElementById("scoringTab"),
       homeName: document.getElementById("homeName"),
       awayName: document.getElementById("awayName"),
       periodCount: document.getElementById("periodCount"),
       inningPairsPerPeriod: document.getElementById("inningPairsPerPeriod"),
+      overlayScale: document.getElementById("overlayScale"),
+      overlayScaleNumber: document.getElementById("overlayScaleNumber"),
+      overlayScaleLabel: document.getElementById("overlayScaleLabel"),
       showOverlay: document.getElementById("showOverlay"),
       saveSetupBtn: document.getElementById("saveSetupBtn"),
       setupStatus: document.getElementById("setupStatus"),
@@ -252,22 +322,26 @@
       awayPreviewSets: document.getElementById("awayPreviewSets"),
       homePreviewRuns: document.getElementById("homePreviewRuns"),
       awayPreviewRuns: document.getElementById("awayPreviewRuns"),
+      homePreviewOuts: document.getElementById("homePreviewOuts"),
+      awayPreviewOuts: document.getElementById("awayPreviewOuts"),
       periodPreview: document.getElementById("periodPreview"),
       inningPreview: document.getElementById("inningPreview"),
-      outsPreview: document.getElementById("outsPreview"),
-      homeRunBtn: document.getElementById("homeRunBtn"),
-      awayRunBtn: document.getElementById("awayRunBtn"),
+      battingPreview: document.getElementById("battingPreview"),
+      activeRunPlusBtn: document.getElementById("activeRunPlusBtn"),
+      activeRunMinusBtn: document.getElementById("activeRunMinusBtn"),
       outBtn: document.getElementById("outBtn"),
       changeTurnBtn: document.getElementById("changeTurnBtn"),
-      homeSetBtn: document.getElementById("homeSetBtn"),
-      awaySetBtn: document.getElementById("awaySetBtn"),
-      nextPeriodBtn: document.getElementById("nextPeriodBtn"),
-      homeRunMinusBtn: document.getElementById("homeRunMinusBtn"),
-      awayRunMinusBtn: document.getElementById("awayRunMinusBtn"),
+      nextBatterSub: document.getElementById("nextBatterSub"),
+      openNextPeriodBtn: document.getElementById("openNextPeriodBtn"),
       undoBtn: document.getElementById("undoBtn"),
       gameStatus: document.getElementById("gameStatus"),
       resetScoreboardBtn: document.getElementById("resetScoreboardBtn"),
-      resetStatus: document.getElementById("resetStatus")
+      resetStatus: document.getElementById("resetStatus"),
+      nextPeriodModal: document.getElementById("nextPeriodModal"),
+      nextPeriodHelp: document.getElementById("nextPeriodHelp"),
+      homePeriodWinnerBtn: document.getElementById("homePeriodWinnerBtn"),
+      awayPeriodWinnerBtn: document.getElementById("awayPeriodWinnerBtn"),
+      cancelNextPeriodBtn: document.getElementById("cancelNextPeriodBtn")
     };
 
     const overlayUrl = new URL("overlay.html", location.href);
@@ -286,17 +360,22 @@
     });
 
     els.logoutBtn.addEventListener("click", () => signOut(auth));
+    els.setupTabBtn.addEventListener("click", () => setActiveTab("setup"));
+    els.scoringTabBtn.addEventListener("click", () => setActiveTab("scoring"));
     els.saveSetupBtn.addEventListener("click", saveSetup);
     els.showOverlay.addEventListener("change", () => saveAction({ showOverlay: els.showOverlay.checked }, "Overlay visibility updated."));
-    els.homeRunBtn.addEventListener("click", () => adjustNumber("homeRuns", 1, "Kotijoukkue +1."));
-    els.awayRunBtn.addEventListener("click", () => adjustNumber("awayRuns", 1, "Vierasjoukkue +1."));
-    els.homeRunMinusBtn.addEventListener("click", () => adjustNumber("homeRuns", -1, "Kotijoukkue -1."));
-    els.awayRunMinusBtn.addEventListener("click", () => adjustNumber("awayRuns", -1, "Vierasjoukkue -1."));
-    els.homeSetBtn.addEventListener("click", () => adjustNumber("homeSetWins", 1, "Kotijoukkue jakso +1."));
-    els.awaySetBtn.addEventListener("click", () => adjustNumber("awaySetWins", 1, "Vierasjoukkue jakso +1."));
+    els.overlayScale.addEventListener("input", () => syncScaleInputs(els.overlayScale.value));
+    els.overlayScaleNumber.addEventListener("input", () => syncScaleInputs(els.overlayScaleNumber.value));
+    els.overlayScale.addEventListener("change", () => saveOverlayScale());
+    els.overlayScaleNumber.addEventListener("change", () => saveOverlayScale());
+    els.activeRunPlusBtn.addEventListener("click", () => adjustActiveRuns(1));
+    els.activeRunMinusBtn.addEventListener("click", () => adjustActiveRuns(-1));
     els.outBtn.addEventListener("click", addOut);
     els.changeTurnBtn.addEventListener("click", changeTurn);
-    els.nextPeriodBtn.addEventListener("click", nextPeriod);
+    els.openNextPeriodBtn.addEventListener("click", openNextPeriodModal);
+    els.homePeriodWinnerBtn.addEventListener("click", () => finishPeriod("home"));
+    els.awayPeriodWinnerBtn.addEventListener("click", () => finishPeriod("away"));
+    els.cancelNextPeriodBtn.addEventListener("click", closeNextPeriodModal);
     els.undoBtn.addEventListener("click", undo);
     els.resetScoreboardBtn.addEventListener("click", resetScoreboard);
 
@@ -329,6 +408,7 @@
         inningHalf: "A",
         battingTeam: "home",
         outs: 0,
+        overlayScale: 100,
         showOverlay: true,
         undo: null,
         updatedAt: Date.now()
@@ -340,17 +420,36 @@
       if (!snapshot.exists()) await set(gameRef, defaultGame());
     }
 
+    function setActiveTab(tab) {
+      activeTab = tab;
+      els.setupTab.classList.toggle("hide", tab !== "setup");
+      els.scoringTab.classList.toggle("hide", tab !== "scoring");
+      els.setupTabBtn.classList.toggle("active", tab === "setup");
+      els.scoringTabBtn.classList.toggle("active", tab === "scoring");
+    }
+
     function render() {
       if (!gameState) return;
+      const periodCount = getPeriodCount();
+      const inningPairs = getInningPairsPerPeriod();
+      const overlayScale = getOverlayScale();
+
       els.homeName.value = gameState.homeName || "";
       els.awayName.value = gameState.awayName || "";
-      els.periodCount.value = getPeriodCount();
-      els.inningPairsPerPeriod.value = getInningPairsPerPeriod();
+      els.periodCount.value = periodCount;
+      els.inningPairsPerPeriod.value = inningPairs;
       els.showOverlay.checked = gameState.showOverlay !== false;
+      syncScaleInputs(overlayScale, false);
 
       const homeName = gameState.homeName || "HOME";
       const awayName = gameState.awayName || "AWAY";
-      const battingTeam = gameState.battingTeam === "away" ? "away" : "home";
+      const battingTeam = getBattingTeam();
+      const battingName = battingTeam === "home" ? homeName : awayName;
+      const nextName = battingTeam === "home" ? awayName : homeName;
+      const outs = clampInt(gameState.outs, 0, 2);
+      const period = clampInt(gameState.period, 1, periodCount);
+      const inningNumber = clampInt(gameState.inningNumber, 1, inningPairs);
+      const half = formatHalf(gameState.inningHalf);
 
       els.homePreviewName.textContent = homeName;
       els.awayPreviewName.textContent = awayName;
@@ -360,42 +459,68 @@
       els.awayPreviewSets.textContent = clampInt(gameState.awaySetWins, 0, 9);
       els.homePreviewRuns.textContent = clampInt(gameState.homeRuns, 0, 99);
       els.awayPreviewRuns.textContent = clampInt(gameState.awayRuns, 0, 99);
-      const period = clampInt(gameState.period, 1, getPeriodCount());
-      const inningNumber = clampInt(gameState.inningNumber, 1, getInningPairsPerPeriod());
-      const half = formatHalf(gameState.inningHalf);
-      els.periodPreview.textContent = `${period}. jakso / ${getPeriodCount()}`;
-      els.inningPreview.textContent = `${inningNumber}${half}`;
-      els.outsPreview.textContent = `Palot: ${clampInt(gameState.outs, 0, 2)}`;
-      els.homeRunBtn.textContent = `${homeName} +1`;
-      els.awayRunBtn.textContent = `${awayName} +1`;
-      els.homeSetBtn.textContent = `${homeName} jakso +`;
-      els.awaySetBtn.textContent = `${awayName} jakso +`;
+      els.homePreviewOuts.textContent = battingTeam === "home" ? formatOuts(outs) : "";
+      els.awayPreviewOuts.textContent = battingTeam === "away" ? formatOuts(outs) : "";
+      els.periodPreview.textContent = `Jakso: ${period}/${periodCount}`;
+      els.inningPreview.textContent = `Vuoropari: ${inningNumber}${half}`;
+      els.battingPreview.textContent = `Sisällä: ${battingName}`;
+      els.activeRunPlusBtn.textContent = `+1 juoksu ${battingName}`;
+      els.activeRunMinusBtn.textContent = `-1 juoksu ${battingName}`;
+      els.outBtn.textContent = `Palo + ${battingName}`;
+      els.nextBatterSub.textContent = `${nextName} lyömään`;
       els.changeTurnBtn.disabled = !canAdvanceTurn();
-      els.nextPeriodBtn.disabled = period >= getPeriodCount();
+      els.openNextPeriodBtn.disabled = period >= periodCount;
       els.undoBtn.disabled = !gameState.undo;
+      els.homePeriodWinnerBtn.textContent = homeName;
+      els.awayPeriodWinnerBtn.textContent = awayName;
+      els.nextPeriodHelp.textContent = `Valinta lisää jaksopisteen jakson ${period} voittajalle ja siirtää pelin jaksoon ${Math.min(period + 1, periodCount)}.`;
+    }
+
+    function syncScaleInputs(value, updateValues = true) {
+      const scale = clampInt(value, 50, 180);
+      if (updateValues) {
+        els.overlayScale.value = scale;
+        els.overlayScaleNumber.value = scale;
+      } else if (document.activeElement !== els.overlayScale && document.activeElement !== els.overlayScaleNumber) {
+        els.overlayScale.value = scale;
+        els.overlayScaleNumber.value = scale;
+      }
+      els.overlayScaleLabel.textContent = `${scale}%`;
+    }
+
+    async function saveOverlayScale() {
+      await saveAction({ overlayScale: clampInt(els.overlayScaleNumber.value || els.overlayScale.value, 50, 180) }, "Overlayn koko tallennettu.");
     }
 
     async function saveSetup() {
+      const nextPeriodCount = clampInt(els.periodCount.value, 1, 9);
+      const nextInningPairs = clampInt(els.inningPairsPerPeriod.value, 1, 9);
       await saveAction({
         homeName: els.homeName.value.trim() || "HOME",
         awayName: els.awayName.value.trim() || "AWAY",
-        periodCount: clampInt(els.periodCount.value, 1, 9),
-        inningPairsPerPeriod: clampInt(els.inningPairsPerPeriod.value, 1, 9),
-        period: clampInt(gameState?.period, 1, clampInt(els.periodCount.value, 1, 9)),
-        inningNumber: clampInt(gameState?.inningNumber, 1, clampInt(els.inningPairsPerPeriod.value, 1, 9)),
+        periodCount: nextPeriodCount,
+        inningPairsPerPeriod: nextInningPairs,
+        overlayScale: clampInt(els.overlayScaleNumber.value || els.overlayScale.value, 50, 180),
+        period: clampInt(gameState?.period, 1, nextPeriodCount),
+        inningNumber: clampInt(gameState?.inningNumber, 1, nextInningPairs),
         inningHalf: formatHalf(gameState?.inningHalf),
         showOverlay: els.showOverlay.checked
       }, "Setup saved.");
+      els.setupStatus.textContent = "Setup saved.";
     }
 
-    async function adjustNumber(field, delta, message) {
-      const current = clampInt(gameState?.[field], 0, field.includes("Runs") ? 99 : 9);
-      await saveAction({ [field]: Math.max(0, current + delta) }, message);
+    async function adjustActiveRuns(delta) {
+      const battingTeam = getBattingTeam();
+      const field = battingTeam === "home" ? "homeRuns" : "awayRuns";
+      const current = clampInt(gameState?.[field], 0, 99);
+      const teamName = battingTeam === "home" ? gameState.homeName || "HOME" : gameState.awayName || "AWAY";
+      await saveAction({ [field]: Math.max(0, current + delta) }, `${teamName} ${delta > 0 ? "+1" : "-1"} juoksu.`);
     }
 
     async function addOut() {
       const outs = clampInt(gameState?.outs, 0, 2);
-      await saveAction({ outs: Math.min(2, outs + 1) }, "Palo lisätty.");
+      const teamName = getBattingTeam() === "home" ? gameState.homeName || "HOME" : gameState.awayName || "AWAY";
+      await saveAction({ outs: Math.min(2, outs + 1) }, `Palo lisätty: ${teamName}.`);
     }
 
     async function changeTurn() {
@@ -406,7 +531,7 @@
 
       const half = formatHalf(gameState?.inningHalf);
       const inningNumber = clampInt(gameState?.inningNumber, 1, getInningPairsPerPeriod());
-      const battingTeam = gameState?.battingTeam === "away" ? "away" : "home";
+      const battingTeam = getBattingTeam();
       const updates = {
         outs: 0,
         battingTeam: battingTeam === "home" ? "away" : "home"
@@ -421,13 +546,30 @@
       await saveAction(updates, "Vuoro vaihdettu.");
     }
 
-    async function nextPeriod() {
+    function openNextPeriodModal() {
       const period = clampInt(gameState?.period, 1, getPeriodCount());
       if (period >= getPeriodCount()) {
         els.gameStatus.textContent = `Jaksojen maksimi on ${getPeriodCount()}.`;
         return;
       }
+      els.nextPeriodModal.classList.remove("hide");
+    }
+
+    function closeNextPeriodModal() {
+      els.nextPeriodModal.classList.add("hide");
+    }
+
+    async function finishPeriod(winner) {
+      const period = clampInt(gameState?.period, 1, getPeriodCount());
+      if (period >= getPeriodCount()) {
+        closeNextPeriodModal();
+        els.gameStatus.textContent = `Jaksojen maksimi on ${getPeriodCount()}.`;
+        return;
+      }
+      const setField = winner === "away" ? "awaySetWins" : "homeSetWins";
+      const nextSetWins = clampInt(gameState?.[setField], 0, 9) + 1;
       await saveAction({
+        [setField]: nextSetWins,
         period: period + 1,
         inningNumber: 1,
         inningHalf: "A",
@@ -435,7 +577,8 @@
         outs: 0,
         homeRuns: 0,
         awayRuns: 0
-      }, "Jakso vaihdettu ja juoksut nollattu.");
+      }, "Seuraava jakso aloitettu.");
+      closeNextPeriodModal();
     }
 
     async function resetScoreboard() {
@@ -482,8 +625,24 @@
       return clampInt(value, 1, 9);
     }
 
+    function getOverlayScale() {
+      const value = Number.parseInt(gameState?.overlayScale, 10);
+      if (!Number.isFinite(value)) return 100;
+      return clampInt(value, 50, 180);
+    }
+
+    function getBattingTeam() {
+      return gameState?.battingTeam === "away" ? "away" : "home";
+    }
+
     function formatHalf(value) {
       return value === "T" || value === "B" ? "T" : "A";
+    }
+
+    function formatOuts(value) {
+      const outs = clampInt(value, 0, 2);
+      if (outs === 0) return "";
+      return "X".repeat(outs);
     }
 
     function canAdvanceTurn() {

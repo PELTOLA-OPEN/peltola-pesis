@@ -4,7 +4,7 @@ Kevyt pesäpallo-scorebug Twitch/OBS-striimiin. Overlay on tarkoitettu käytett�
 
 ## Tiedostot
 
-- `overlay.html` - oikean yläkulman pesäpallo-scorebug
+- `overlay.html` - vasemman yläkulman pesäpallo-scorebug
 - `control.html` - mobiiliystävällinen kontrollipaneeli
 - `firebase-config.example.js` - Firebase-konfiguraation pohja
 - `.gitignore` - estää oman `firebase-config.js`-tiedoston committaamisen
@@ -68,8 +68,10 @@ overlay.html?game=main&debug=1
       "homeSetWins": 1,
       "awaySetWins": 0,
       "period": 2,
+      "periodCount": 2,
+      "inningPairsPerPeriod": 4,
       "inningNumber": 3,
-      "inningHalf": "B",
+      "inningHalf": "T",
       "battingTeam": "away",
       "outs": 1,
       "showOverlay": true
@@ -77,3 +79,13 @@ overlay.html?game=main&debug=1
   }
 }
 ```
+
+
+## Viimeisimmät hienosäädöt
+
+- Overlay on vasemmassa yläkulmassa.
+- Vuoroparin alempi vuoro näytetään muodossa `T`, esimerkiksi `1A` ja `1T`.
+- Setupissa voi määrittää jaksojen määrän ja vuoroparien määrän per jakso.
+- Control panel ei päästä vuoroparia asetetun maksimin yli.
+- Palojen ruudut näkyvät vain sisällä olevan joukkueen rivillä.
+- Control panelin lopussa on erillinen manuaalinen pistetaulukon nollaus.

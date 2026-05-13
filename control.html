@@ -149,13 +149,18 @@
           <label>Vierasjoukkue
             <input id="awayName" type="text" placeholder="VETO" />
           </label>
+          <label>Jaksojen määrä
+            <input id="periodCount" type="number" min="1" max="9" step="1" />
+          </label>
+          <label>Vuoropareja per jakso
+            <input id="inningPairsPerPeriod" type="number" min="1" max="9" step="1" />
+          </label>
         </div>
         <div class="row" style="margin-top:12px;">
           <label class="row" style="display:flex; gap:8px;">
             <input id="showOverlay" type="checkbox" /> Näytä overlay
           </label>
           <button id="saveSetupBtn" type="button">Save setup</button>
-          <button id="resetGameBtn" class="danger" type="button">Reset game</button>
         </div>
         <div id="setupStatus" class="status"></div>
       </section>
@@ -196,6 +201,13 @@
         </div>
         <div id="gameStatus" class="status"></div>
       </section>
+
+      <section class="card">
+        <h2>Manuaalinen nollaus</h2>
+        <p class="muted">Nollaa juoksut, jaksovoitot, jakson, vuoroparin ja palot. Joukkueiden nimet ja ottelun asetukset säilyvät.</p>
+        <button id="resetScoreboardBtn" class="danger big" type="button">Nollaa koko pistetaulukko</button>
+        <div id="resetStatus" class="status"></div>
+      </section>
     </section>
   </main>
 
@@ -229,9 +241,10 @@
       overlayUrl: document.getElementById("overlayUrl"),
       homeName: document.getElementById("homeName"),
       awayName: document.getElementById("awayName"),
+      periodCount: document.getElementById("periodCount"),
+      inningPairsPerPeriod: document.getElementById("inningPairsPerPeriod"),
       showOverlay: document.getElementById("showOverlay"),
       saveSetupBtn: document.getElementById("saveSetupBtn"),
-      resetGameBtn: document.getElementById("resetGameBtn"),
       setupStatus: document.getElementById("setupStatus"),
       homePreviewName: document.getElementById("homePreviewName"),
       awayPreviewName: document.getElementById("awayPreviewName"),
@@ -252,7 +265,9 @@
       homeRunMinusBtn: document.getElementById("homeRunMinusBtn"),
       awayRunMinusBtn: document.getElementById("awayRunMinusBtn"),
       undoBtn: document.getElementById("undoBtn"),
-      gameStatus: document.getElementById("gameStatus")
+      gameStatus: document.getElementById("gameStatus"),
+      resetScoreboardBtn: document.getElementById("resetScoreboardBtn"),
+      resetStatus: document.getElementById("resetStatus")
     };
 
     const overlayUrl = new URL("overlay.html", location.href);
@@ -272,7 +287,6 @@
 
     els.logoutBtn.addEventListener("click", () => signOut(auth));
     els.saveSetupBtn.addEventListener("click", saveSetup);
-    els.resetGameBtn.addEventListener("click", resetGame);
     els.showOverlay.addEventListener("change", () => saveAction({ showOverlay: els.showOverlay.checked }, "Overlay visibility updated."));
     els.homeRunBtn.addEventListener("click", () => adjustNumber("homeRuns", 1, "Kotijoukkue +1."));
     els.awayRunBtn.addEventListener("click", () => adjustNumber("awayRuns", 1, "Vierasjoukkue +1."));
@@ -284,6 +298,7 @@
     els.changeTurnBtn.addEventListener("click", changeTurn);
     els.nextPeriodBtn.addEventListener("click", nextPeriod);
     els.undoBtn.addEventListener("click", undo);
+    els.resetScoreboardBtn.addEventListener("click", resetScoreboard);
 
     onAuthStateChanged(auth, async user => {
       signedIn = Boolean(user);
@@ -308,6 +323,8 @@
         homeSetWins: 0,
         awaySetWins: 0,
         period: 1,
+        periodCount: 2,
+        inningPairsPerPeriod: 4,
         inningNumber: 1,
         inningHalf: "A",
         battingTeam: "home",
@@ -327,6 +344,8 @@
       if (!gameState) return;
       els.homeName.value = gameState.homeName || "";
       els.awayName.value = gameState.awayName || "";
+      els.periodCount.value = getPeriodCount();
+      els.inningPairsPerPeriod.value = getInningPairsPerPeriod();
       els.showOverlay.checked = gameState.showOverlay !== false;
 
       const homeName = gameState.homeName || "HOME";
@@ -341,13 +360,18 @@
       els.awayPreviewSets.textContent = clampInt(gameState.awaySetWins, 0, 9);
       els.homePreviewRuns.textContent = clampInt(gameState.homeRuns, 0, 99);
       els.awayPreviewRuns.textContent = clampInt(gameState.awayRuns, 0, 99);
-      els.periodPreview.textContent = `${clampInt(gameState.period, 1, 9)}. jakso`;
-      els.inningPreview.textContent = `${clampInt(gameState.inningNumber, 1, 9)}${gameState.inningHalf === "B" ? "B" : "A"}`;
+      const period = clampInt(gameState.period, 1, getPeriodCount());
+      const inningNumber = clampInt(gameState.inningNumber, 1, getInningPairsPerPeriod());
+      const half = formatHalf(gameState.inningHalf);
+      els.periodPreview.textContent = `${period}. jakso / ${getPeriodCount()}`;
+      els.inningPreview.textContent = `${inningNumber}${half}`;
       els.outsPreview.textContent = `Palot: ${clampInt(gameState.outs, 0, 2)}`;
       els.homeRunBtn.textContent = `${homeName} +1`;
       els.awayRunBtn.textContent = `${awayName} +1`;
       els.homeSetBtn.textContent = `${homeName} jakso +`;
       els.awaySetBtn.textContent = `${awayName} jakso +`;
+      els.changeTurnBtn.disabled = !canAdvanceTurn();
+      els.nextPeriodBtn.disabled = period >= getPeriodCount();
       els.undoBtn.disabled = !gameState.undo;
     }
 
@@ -355,6 +379,11 @@
       await saveAction({
         homeName: els.homeName.value.trim() || "HOME",
         awayName: els.awayName.value.trim() || "AWAY",
+        periodCount: clampInt(els.periodCount.value, 1, 9),
+        inningPairsPerPeriod: clampInt(els.inningPairsPerPeriod.value, 1, 9),
+        period: clampInt(gameState?.period, 1, clampInt(els.periodCount.value, 1, 9)),
+        inningNumber: clampInt(gameState?.inningNumber, 1, clampInt(els.inningPairsPerPeriod.value, 1, 9)),
+        inningHalf: formatHalf(gameState?.inningHalf),
         showOverlay: els.showOverlay.checked
       }, "Setup saved.");
     }
@@ -370,26 +399,36 @@
     }
 
     async function changeTurn() {
-      const half = gameState?.inningHalf === "B" ? "B" : "A";
-      const inningNumber = clampInt(gameState?.inningNumber, 1, 9);
+      if (!canAdvanceTurn()) {
+        els.gameStatus.textContent = `Vuoroparien maksimi tässä jaksossa on ${getInningPairsPerPeriod()}.`;
+        return;
+      }
+
+      const half = formatHalf(gameState?.inningHalf);
+      const inningNumber = clampInt(gameState?.inningNumber, 1, getInningPairsPerPeriod());
       const battingTeam = gameState?.battingTeam === "away" ? "away" : "home";
       const updates = {
         outs: 0,
         battingTeam: battingTeam === "home" ? "away" : "home"
       };
+
       if (half === "A") {
-        updates.inningHalf = "B";
+        updates.inningHalf = "T";
       } else {
         updates.inningHalf = "A";
-        updates.inningNumber = Math.min(9, inningNumber + 1);
+        updates.inningNumber = inningNumber + 1;
       }
       await saveAction(updates, "Vuoro vaihdettu.");
     }
 
     async function nextPeriod() {
-      const period = clampInt(gameState?.period, 1, 9);
+      const period = clampInt(gameState?.period, 1, getPeriodCount());
+      if (period >= getPeriodCount()) {
+        els.gameStatus.textContent = `Jaksojen maksimi on ${getPeriodCount()}.`;
+        return;
+      }
       await saveAction({
-        period: Math.min(9, period + 1),
+        period: period + 1,
         inningNumber: 1,
         inningHalf: "A",
         battingTeam: "home",
@@ -399,11 +438,22 @@
       }, "Jakso vaihdettu ja juoksut nollattu.");
     }
 
-    async function resetGame() {
-      if (!window.confirm("Resetoi koko peli? Joukkueiden nimet säilyvät.")) return;
-      const homeName = gameState?.homeName || "HOME";
-      const awayName = gameState?.awayName || "AWAY";
-      await saveAction({ ...defaultGame(), homeName, awayName, undo: null }, "Game reset.");
+    async function resetScoreboard() {
+      if (!window.confirm("Nollataanko koko pistetaulukko? Joukkueiden nimet ja asetukset säilyvät.")) return;
+      const updates = {
+        homeRuns: 0,
+        awayRuns: 0,
+        homeSetWins: 0,
+        awaySetWins: 0,
+        period: 1,
+        inningNumber: 1,
+        inningHalf: "A",
+        battingTeam: "home",
+        outs: 0,
+        undo: null
+      };
+      await saveAction(updates, "Pistetaulukko nollattu.");
+      els.resetStatus.textContent = "Pistetaulukko nollattu.";
     }
 
     async function undo() {
@@ -418,6 +468,28 @@
       const previous = stripUndo(gameState);
       await update(gameRef, { ...updates, undo: previous, updatedAt: Date.now() });
       els.gameStatus.textContent = message;
+    }
+
+    function getPeriodCount() {
+      const value = Number.parseInt(gameState?.periodCount, 10);
+      if (!Number.isFinite(value)) return 2;
+      return clampInt(value, 1, 9);
+    }
+
+    function getInningPairsPerPeriod() {
+      const value = Number.parseInt(gameState?.inningPairsPerPeriod, 10);
+      if (!Number.isFinite(value)) return 4;
+      return clampInt(value, 1, 9);
+    }
+
+    function formatHalf(value) {
+      return value === "T" || value === "B" ? "T" : "A";
+    }
+
+    function canAdvanceTurn() {
+      const half = formatHalf(gameState?.inningHalf);
+      const inningNumber = clampInt(gameState?.inningNumber, 1, getInningPairsPerPeriod());
+      return half === "A" || inningNumber < getInningPairsPerPeriod();
     }
 
     function stripUndo(value) {

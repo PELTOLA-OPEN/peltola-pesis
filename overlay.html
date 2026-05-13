@@ -45,7 +45,7 @@
     .scorebug {
       position: absolute;
       top: 4vh;
-      right: 3.5vw;
+      left: 3.5vw;
       display: grid;
       gap: 6px;
       width: min(470px, 44vw);
@@ -123,7 +123,10 @@
     }
 
     .out-cell.empty { color: transparent; }
-    .team-row:not(.active) .out-cell { opacity: 0.18; }
+    .team-row:not(.active) .out-cell {
+      visibility: hidden;
+      opacity: 0;
+    }
 
     .meta {
       display: inline-grid;
@@ -160,7 +163,7 @@
     @media (max-width: 760px) {
       .scorebug {
         top: 12px;
-        right: 10px;
+        left: 10px;
         width: calc(100vw - 20px);
       }
 
@@ -263,10 +266,14 @@
       els.homeRuns.textContent = clampInt(game.homeRuns, 0, 99);
       els.awayRuns.textContent = clampInt(game.awayRuns, 0, 99);
       els.period.textContent = `${clampInt(game.period, 1, 9)}.`;
-      els.inning.textContent = `${clampInt(game.inningNumber, 1, 9)}${game.inningHalf === "B" ? "B" : "A"}`;
+      els.inning.textContent = `${clampInt(game.inningNumber, 1, 99)}${formatHalf(game.inningHalf)}`;
 
       setOutCells("home", battingTeam === "home" ? outs : 0);
       setOutCells("away", battingTeam === "away" ? outs : 0);
+    }
+
+    function formatHalf(value) {
+      return value === "T" || value === "B" ? "T" : "A";
     }
 
     function setOutCells(team, outs) {

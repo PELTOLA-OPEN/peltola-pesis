@@ -85,9 +85,10 @@
 
     .score-preview > div { padding: 12px 8px; border-bottom: 1px solid var(--border); }
     .score-preview > div:nth-last-child(-n+4) { border-bottom: 0; }
-    .score-preview .head { color: var(--muted); font-size: 8.25px; font-weight: 900; letter-spacing: 0; text-transform: uppercase; white-space: nowrap; }
+    .score-preview .head { color: var(--muted); font-size: 20px; font-weight: 950; letter-spacing: 0; text-transform: uppercase; white-space: nowrap; }
     .score-preview .team { min-width: max-content; overflow: visible; padding-right: 12px; font-size: 20px; font-weight: 950; text-transform: uppercase; white-space: nowrap; }
     .score-preview .num { min-width: 0; text-align: center; font-size: 24px; font-weight: 950; }
+    .score-preview .stat-head { min-width: 0; text-align: center; font-size: 12px !important; font-weight: 950; line-height: 1; }
     .active-team { color: var(--accent); }
 
     .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -137,9 +138,10 @@
       button.big { min-height: 58px; }
       .score-preview { grid-template-columns: max-content minmax(48px, 1fr) minmax(54px, 1fr) minmax(48px, 1fr); width: 100%; }
       .score-preview > div { padding: 9px 5px; }
-      .score-preview .head { font-size: 6.35px; letter-spacing: 0; }
+      .score-preview .head { font-size: 17px; letter-spacing: 0; }
       .score-preview .team { padding-right: 8px; font-size: 17px; }
       .score-preview .num { font-size: 21px; }
+      .score-preview .stat-head { font-size: 10px !important; }
     }
   </style>
 </head>
@@ -223,7 +225,7 @@
         <section class="card">
           <h2>Tilanne</h2>
           <div class="score-preview">
-            <div class="head" aria-hidden="true"></div><div class="head num">Jaksot</div><div class="head num">Juoksut</div><div class="head num">Palot</div>
+            <div class="head" aria-hidden="true"></div><div class="head stat-head">Jakso</div><div class="head stat-head">Juoksut</div><div class="head stat-head">Palot</div>
             <div id="homePreviewName" class="team">HOME</div><div id="homePreviewSets" class="num">0</div><div id="homePreviewRuns" class="num">0</div><div id="homePreviewOuts" class="num">-</div>
             <div id="awayPreviewName" class="team">AWAY</div><div id="awayPreviewSets" class="num">0</div><div id="awayPreviewRuns" class="num">0</div><div id="awayPreviewOuts" class="num">-</div>
           </div>

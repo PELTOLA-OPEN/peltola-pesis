@@ -64,13 +64,11 @@
 
     .team-row {
       display: grid;
-      grid-template-columns: 10px minmax(var(--name-col), max-content) 64px 64px;
+      grid-template-columns: 10px var(--name-col) 64px 64px 46px 46px;
       min-height: clamp(39px, 4.3vw, 58px);
       border-bottom: 1px solid rgba(0, 0, 0, 0.22);
       background: linear-gradient(90deg, rgba(31, 210, 196, 0.90), rgba(19, 171, 170, 0.86));
     }
-
-    .team-row.active { grid-template-columns: 10px minmax(var(--name-col), max-content) 64px 64px 46px 46px; }
     .team-row:last-child { border-bottom: 0; }
     .team-row:not(.active) { filter: saturate(0.75) brightness(0.86); }
 
@@ -87,8 +85,8 @@
     }
 
     .team-name {
-      padding: 0 4ch 0 16px;
-      overflow: visible;
+      padding: 0 2ch 0 16px;
+      overflow: hidden;
       color: rgba(0, 0, 0, 0.78);
       font-size: clamp(20px, 2.5vw, 36px);
       font-weight: 950;
@@ -96,6 +94,7 @@
       line-height: 1;
       text-transform: uppercase;
       white-space: nowrap;
+      text-overflow: clip;
       text-shadow: none;
     }
 
@@ -129,7 +128,9 @@
 
     .out-cell.empty { color: transparent; }
     .team-row:not(.active) .out-cell {
-      display: none;
+      border-left-color: transparent;
+      background: transparent;
+      color: transparent;
     }
 
     .meta {
@@ -173,14 +174,12 @@
       }
 
       .team-row {
-        grid-template-columns: 8px minmax(var(--name-col), max-content) 48px 48px;
+        grid-template-columns: 8px var(--name-col) 48px 48px 36px 36px;
         min-height: 42px;
       }
 
-      .team-row.active { grid-template-columns: 8px minmax(var(--name-col), max-content) 48px 48px 36px 36px; }
-
       .team-name {
-        padding: 0 4ch 0 10px;
+        padding: 0 2ch 0 10px;
         font-size: 20px;
       }
 
@@ -284,7 +283,7 @@
 
     function setNameColumnSize(homeName, awayName) {
       const longest = Math.max(String(homeName).length, String(awayName).length, 4);
-      const widthCh = Math.min(Math.max(longest + 4, 10), 32);
+      const widthCh = Math.min(Math.max(longest + 2, 10), 32);
       document.documentElement.style.setProperty("--name-col", `${widthCh}ch`);
     }
 

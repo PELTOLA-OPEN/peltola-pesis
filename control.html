@@ -270,6 +270,9 @@
         <button id="awayPeriodWinnerBtn" class="big primary" type="button">Vierasjoukkue</button>
       </div>
       <div class="single-grid" style="margin-top:10px;">
+        <button id="tiePeriodWinnerBtn" class="big" type="button">Tasapeli</button>
+      </div>
+      <div class="single-grid" style="margin-top:10px;">
         <button id="cancelNextPeriodBtn" type="button">Peruuta</button>
       </div>
     </section>
@@ -344,6 +347,7 @@
       nextPeriodHelp: document.getElementById("nextPeriodHelp"),
       homePeriodWinnerBtn: document.getElementById("homePeriodWinnerBtn"),
       awayPeriodWinnerBtn: document.getElementById("awayPeriodWinnerBtn"),
+      tiePeriodWinnerBtn: document.getElementById("tiePeriodWinnerBtn"),
       cancelNextPeriodBtn: document.getElementById("cancelNextPeriodBtn")
     };
 
@@ -379,6 +383,7 @@
     els.openNextPeriodBtn.addEventListener("click", openNextPeriodModal);
     els.homePeriodWinnerBtn.addEventListener("click", () => finishPeriod("home"));
     els.awayPeriodWinnerBtn.addEventListener("click", () => finishPeriod("away"));
+    els.tiePeriodWinnerBtn.addEventListener("click", () => finishPeriod("tie"));
     els.cancelNextPeriodBtn.addEventListener("click", closeNextPeriodModal);
     els.undoBtn.addEventListener("click", undo);
     els.resetScoreboardBtn.addEventListener("click", resetScoreboard);
@@ -410,7 +415,7 @@
         inningPairsPerPeriod: 4,
         inningNumber: 1,
         inningHalf: "A",
-        battingTeam: "home",
+        battingTeam: getStartingBattingTeamForPeriod(1),
         outs: 0,
         overlayScale: 100,
         showOverlay: true,
@@ -478,7 +483,7 @@
       els.undoBtn.disabled = !getUndoStack().length;
       els.homePeriodWinnerBtn.textContent = homeName;
       els.awayPeriodWinnerBtn.textContent = awayName;
-      els.nextPeriodHelp.textContent = `Valinta lisää jaksopisteen jakson ${period} voittajalle ja siirtää pelin jaksoon ${Math.min(period + 1, periodCount)}.`;
+      els.nextPeriodHelp.textContent = `Valitse jakson ${period} voittaja tai tasapeli. Tasapelissä kumpikaan joukkue ei saa jaksopistettä. Peli siirtyy jaksoon ${Math.min(period + 1, periodCount)}.`;
     }
 
     function syncScaleInputs(value, updateValues = true) {
@@ -538,9 +543,13 @@
       const half = formatHalf(gameState?.inningHalf);
       const inningNumber = clampInt(gameState?.inningNumber, 1, getInningPairsPerPeriod());
       const battingTeam = getBattingTeam();
+      const nextBattingTeam = battingTeam === "home" ? "away" : "home";
+      const nextName = nextBattingTeam === "home" ? gameState.homeName || "HOME" : gameState.awayName || "AWAY";
+      if (!window.confirm(`Haluatko vaihtaa sisävuoroon ${nextName}?`)) return;
+
       const updates = {
         outs: 0,
-        battingTeam: battingTeam === "home" ? "away" : "home"
+        battingTeam: nextBattingTeam
       };
 
       if (half === "A") {
@@ -572,18 +581,24 @@
         els.gameStatus.textContent = `Jaksojen maksimi on ${getPeriodCount()}.`;
         return;
       }
-      const setField = winner === "away" ? "awaySetWins" : "homeSetWins";
-      const nextSetWins = clampInt(gameState?.[setField], 0, 9) + 1;
-      await saveAction({
-        [setField]: nextSetWins,
-        period: period + 1,
+
+      const nextPeriod = period + 1;
+      const updates = {
+        period: nextPeriod,
         inningNumber: 1,
         inningHalf: "A",
-        battingTeam: "home",
+        battingTeam: getStartingBattingTeamForPeriod(nextPeriod),
         outs: 0,
         homeRuns: 0,
         awayRuns: 0
-      }, "Seuraava jakso aloitettu.");
+      };
+
+      if (winner === "home" || winner === "away") {
+        const setField = winner === "away" ? "awaySetWins" : "homeSetWins";
+        updates[setField] = clampInt(gameState?.[setField], 0, 9) + 1;
+      }
+
+      await saveAction(updates, winner === "tie" ? "Seuraava jakso aloitettu tasapelillä." : "Seuraava jakso aloitettu.");
       closeNextPeriodModal();
     }
 
@@ -597,7 +612,7 @@
         period: 1,
         inningNumber: 1,
         inningHalf: "A",
-        battingTeam: "home",
+        battingTeam: getStartingBattingTeamForPeriod(1),
         outs: 0,
         undoStack: []
       };
@@ -609,6 +624,7 @@
       if (!signedIn || !gameState) return;
       const stack = getUndoStack();
       if (!stack.length) return;
+      if (!window.confirm("Haluatko varmasti kumota aikaisemman tuloksen?")) return;
       const previous = stack[stack.length - 1];
       const remainingStack = stack.slice(0, -1);
       await update(gameRef, { ...previous, undoStack: remainingStack, updatedAt: Date.now() });
@@ -639,6 +655,10 @@
       const value = Number.parseInt(gameState?.overlayScale, 10);
       if (!Number.isFinite(value)) return 100;
       return clampInt(value, 50, 180);
+    }
+
+    function getStartingBattingTeamForPeriod(period) {
+      return clampInt(period, 1, 99) % 2 === 0 ? "away" : "home";
     }
 
     function getBattingTeam() {

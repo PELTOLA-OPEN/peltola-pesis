@@ -59,6 +59,7 @@
     button:disabled { cursor: not-allowed; opacity: 0.45; }
     button.primary { border-color: rgba(216, 241, 90, 0.42); color: var(--accent); }
     button.danger { border-color: var(--danger-border); background: var(--danger); }
+    button.danger-outline { border-color: var(--danger-border); background: var(--panel-2); color: #ff9aa2; }
     button.big { min-height: 62px; font-size: 18px; }
     button .sub { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 800; }
 
@@ -234,17 +235,18 @@
           <h2>Pelin aikana</h2>
           <div class="button-grid">
             <button id="activeRunPlusBtn" class="big primary" type="button">+1 juoksu</button>
-            <button id="activeRunMinusBtn" class="big" type="button">-1 juoksu</button>
+            <button id="activeRunMinusBtn" class="big danger-outline" type="button">-1 juoksu</button>
           </div>
-          <div class="button-grid" style="margin-top:10px;">
-            <button id="outBtn" class="big" type="button">Palo +</button>
+          <div class="single-grid" style="margin-top:10px;">
+            <button id="outPlusBtn" class="big" type="button">+1 palo</button>
+            <button id="outMinusBtn" class="big" type="button">-1 palo</button>
+          </div>
+          <div class="button-grid" style="margin-top:16px;">
             <button id="changeTurnBtn" class="big" type="button">Vuoron vaihto<span id="nextBatterSub" class="sub"></span></button>
+            <button id="undoBtn" class="big danger" type="button">Undo</button>
           </div>
-          <div class="single-grid" style="margin-top:16px;">
+          <div class="single-grid" style="margin-top:10px;">
             <button id="openNextPeriodBtn" class="big primary" type="button">Seuraava jakso</button>
-          </div>
-          <div class="button-grid" style="margin-top:10px;">
-            <button id="undoBtn" class="danger" type="button">Undo</button>
           </div>
           <div id="gameStatus" class="status"></div>
         </section>
@@ -329,7 +331,8 @@
       battingPreview: document.getElementById("battingPreview"),
       activeRunPlusBtn: document.getElementById("activeRunPlusBtn"),
       activeRunMinusBtn: document.getElementById("activeRunMinusBtn"),
-      outBtn: document.getElementById("outBtn"),
+      outPlusBtn: document.getElementById("outPlusBtn"),
+      outMinusBtn: document.getElementById("outMinusBtn"),
       changeTurnBtn: document.getElementById("changeTurnBtn"),
       nextBatterSub: document.getElementById("nextBatterSub"),
       openNextPeriodBtn: document.getElementById("openNextPeriodBtn"),
@@ -370,7 +373,8 @@
     els.overlayScaleNumber.addEventListener("change", () => saveOverlayScale());
     els.activeRunPlusBtn.addEventListener("click", () => adjustActiveRuns(1));
     els.activeRunMinusBtn.addEventListener("click", () => adjustActiveRuns(-1));
-    els.outBtn.addEventListener("click", addOut);
+    els.outPlusBtn.addEventListener("click", () => adjustOuts(1));
+    els.outMinusBtn.addEventListener("click", () => adjustOuts(-1));
     els.changeTurnBtn.addEventListener("click", changeTurn);
     els.openNextPeriodBtn.addEventListener("click", openNextPeriodModal);
     els.homePeriodWinnerBtn.addEventListener("click", () => finishPeriod("home"));
@@ -410,7 +414,7 @@
         outs: 0,
         overlayScale: 100,
         showOverlay: true,
-        undo: null,
+        undoStack: [],
         updatedAt: Date.now()
       };
     }
@@ -446,7 +450,7 @@
       const battingTeam = getBattingTeam();
       const battingName = battingTeam === "home" ? homeName : awayName;
       const nextName = battingTeam === "home" ? awayName : homeName;
-      const outs = clampInt(gameState.outs, 0, 2);
+      const outs = clampInt(gameState.outs, 0, 3);
       const period = clampInt(gameState.period, 1, periodCount);
       const inningNumber = clampInt(gameState.inningNumber, 1, inningPairs);
       const half = formatHalf(gameState.inningHalf);
@@ -466,11 +470,12 @@
       els.battingPreview.textContent = `Sisällä: ${battingName}`;
       els.activeRunPlusBtn.textContent = `+1 juoksu ${battingName}`;
       els.activeRunMinusBtn.textContent = `-1 juoksu ${battingName}`;
-      els.outBtn.textContent = `Palo + ${battingName}`;
+      els.outPlusBtn.textContent = `+1 palo ${battingName}`;
+      els.outMinusBtn.textContent = `-1 palo ${battingName}`;
       els.nextBatterSub.textContent = `${nextName} lyömään`;
       els.changeTurnBtn.disabled = !canAdvanceTurn();
       els.openNextPeriodBtn.disabled = period >= periodCount;
-      els.undoBtn.disabled = !gameState.undo;
+      els.undoBtn.disabled = !getUndoStack().length;
       els.homePeriodWinnerBtn.textContent = homeName;
       els.awayPeriodWinnerBtn.textContent = awayName;
       els.nextPeriodHelp.textContent = `Valinta lisää jaksopisteen jakson ${period} voittajalle ja siirtää pelin jaksoon ${Math.min(period + 1, periodCount)}.`;
@@ -517,10 +522,11 @@
       await saveAction({ [field]: Math.max(0, current + delta) }, `${teamName} ${delta > 0 ? "+1" : "-1"} juoksu.`);
     }
 
-    async function addOut() {
-      const outs = clampInt(gameState?.outs, 0, 2);
+    async function adjustOuts(delta) {
+      const outs = clampInt(gameState?.outs, 0, 3);
       const teamName = getBattingTeam() === "home" ? gameState.homeName || "HOME" : gameState.awayName || "AWAY";
-      await saveAction({ outs: Math.min(2, outs + 1) }, `Palo lisätty: ${teamName}.`);
+      const nextOuts = Math.max(0, Math.min(3, outs + delta));
+      await saveAction({ outs: nextOuts }, `${teamName} ${delta > 0 ? "+1" : "-1"} palo.`);
     }
 
     async function changeTurn() {
@@ -593,23 +599,27 @@
         inningHalf: "A",
         battingTeam: "home",
         outs: 0,
-        undo: null
+        undoStack: []
       };
       await saveAction(updates, "Pistetaulukko nollattu.");
       els.resetStatus.textContent = "Pistetaulukko nollattu.";
     }
 
     async function undo() {
-      if (!signedIn || !gameState?.undo) return;
-      const previous = gameState.undo;
-      await update(gameRef, { ...previous, undo: null, updatedAt: Date.now() });
+      if (!signedIn || !gameState) return;
+      const stack = getUndoStack();
+      if (!stack.length) return;
+      const previous = stack[stack.length - 1];
+      const remainingStack = stack.slice(0, -1);
+      await update(gameRef, { ...previous, undoStack: remainingStack, updatedAt: Date.now() });
       els.gameStatus.textContent = "Undo done.";
     }
 
     async function saveAction(updates, message) {
       if (!signedIn || !gameState) return;
       const previous = stripUndo(gameState);
-      await update(gameRef, { ...updates, undo: previous, updatedAt: Date.now() });
+      const undoStack = [...getUndoStack(), previous].slice(-50);
+      await update(gameRef, { ...updates, undo: null, undoStack, updatedAt: Date.now() });
       els.gameStatus.textContent = message;
     }
 
@@ -640,7 +650,7 @@
     }
 
     function formatOuts(value) {
-      const outs = clampInt(value, 0, 2);
+      const outs = clampInt(value, 0, 3);
       if (outs === 0) return "";
       return "X".repeat(outs);
     }
@@ -651,9 +661,16 @@
       return half === "A" || inningNumber < getInningPairsPerPeriod();
     }
 
+    function getUndoStack() {
+      if (Array.isArray(gameState?.undoStack)) return gameState.undoStack;
+      if (gameState?.undo && typeof gameState.undo === "object") return [stripUndo(gameState.undo)];
+      return [];
+    }
+
     function stripUndo(value) {
       const clone = { ...(value || {}) };
       delete clone.undo;
+      delete clone.undoStack;
       return clone;
     }
 

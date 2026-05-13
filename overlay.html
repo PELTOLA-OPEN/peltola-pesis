@@ -68,7 +68,7 @@
 
     .team-row {
       display: grid;
-      grid-template-columns: 10px var(--name-col) 64px 64px 46px 46px;
+      grid-template-columns: 10px var(--name-col) 64px 64px 46px 46px 46px;
       width: max-content;
       min-height: clamp(39px, 4.3vw, 58px);
     }
@@ -186,7 +186,7 @@
       }
 
       .team-row {
-        grid-template-columns: 8px var(--name-col) 48px 48px 36px 36px;
+        grid-template-columns: 8px var(--name-col) 48px 48px 36px 36px 36px;
         min-height: 42px;
       }
 
@@ -215,6 +215,7 @@
           <div id="homeRuns" class="runs">0</div>
           <div id="homeOut1" class="out-cell empty">X</div>
           <div id="homeOut2" class="out-cell empty">X</div>
+          <div id="homeOut3" class="out-cell empty">X</div>
         </div>
         <div id="awayRow" class="team-row">
           <div class="team-strip away"></div>
@@ -223,6 +224,7 @@
           <div id="awayRuns" class="runs">0</div>
           <div id="awayOut1" class="out-cell empty">X</div>
           <div id="awayOut2" class="out-cell empty">X</div>
+          <div id="awayOut3" class="out-cell empty">X</div>
         </div>
       </div>
       <div class="meta">
@@ -256,8 +258,10 @@
       awayRuns: document.getElementById("awayRuns"),
       homeOut1: document.getElementById("homeOut1"),
       homeOut2: document.getElementById("homeOut2"),
+      homeOut3: document.getElementById("homeOut3"),
       awayOut1: document.getElementById("awayOut1"),
       awayOut2: document.getElementById("awayOut2"),
+      awayOut3: document.getElementById("awayOut3"),
       period: document.getElementById("period"),
       inning: document.getElementById("inning")
     };
@@ -272,7 +276,7 @@
 
       els.scorebug.classList.remove("hidden");
       const battingTeam = game.battingTeam === "away" ? "away" : "home";
-      const outs = clampInt(game.outs, 0, 2);
+      const outs = clampInt(game.outs, 0, 3);
 
       els.homeRow.classList.toggle("active", battingTeam === "home");
       els.awayRow.classList.toggle("active", battingTeam === "away");
@@ -331,6 +335,7 @@
     function setOutCells(team, outs) {
       els[`${team}Out1`].classList.toggle("empty", outs < 1);
       els[`${team}Out2`].classList.toggle("empty", outs < 2);
+      els[`${team}Out3`].classList.toggle("empty", outs < 3);
     }
 
     function clampInt(value, min, max) {

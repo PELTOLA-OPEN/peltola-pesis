@@ -103,6 +103,14 @@
       background: #17aaa0;
     }
 
+    .team-row:not(.active) .set-wins {
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .team-row:not(.active) .runs {
+      background: #004b4c;
+    }
+
     .set-wins,
     .runs {
       justify-items: center;
@@ -135,6 +143,11 @@
     #awayOut2 {
       border-left: 1px solid rgba(0, 0, 0, 0.28);
       border-right: 1px solid rgba(0, 0, 0, 0.28);
+    }
+
+    #awaySets,
+    #awayRuns {
+      border-top: 1px solid rgba(0, 0, 0, 0.28);
     }
 
     .out-cell.empty { color: transparent; }
